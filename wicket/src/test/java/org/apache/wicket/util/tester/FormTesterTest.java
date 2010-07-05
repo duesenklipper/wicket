@@ -18,6 +18,7 @@ package org.apache.wicket.util.tester;
 
 import java.util.Locale;
 
+import org.apache.wicket.Component;
 import org.apache.wicket.PageParameters;
 import org.apache.wicket.Session;
 import org.apache.wicket.WicketTestCase;
@@ -198,5 +199,28 @@ public class FormTesterTest extends WicketTestCase
 		assertNull(page.getFileUpload());
 		assertEquals("Mock Value", domainObject.getText());
 	}
-
+	
+	public void testNoParametersCreatedForDisabledComponents() throws Exception
+	{
+		tester.startPage(new MockFormPage() {
+			@Override
+			protected void onBeforeRender()
+			{
+				super.onBeforeRender();
+				// on first rendering there can't be any form parameters.
+				// on second rendering there must not be any since we disable the form.
+				// the components all get rendered as disabled, so the browser would not send
+				// any parameters. thus FormTester must not send any either.
+				assertTrue(getRequest().getRequestParameters().getParameters().isEmpty());
+			}
+		});
+		final Component form = tester.getComponentFromLastRenderedPage("form");
+		form.setEnabled(false);
+		assertFalse(form.isEnabled());
+		Component check = tester.getComponentFromLastRenderedPage("form:checkbox");
+		assertTrue(check.isEnabled());
+		assertFalse(check.isEnabledInHierarchy());
+		FormTester formTester = tester.newFormTester("form");
+		formTester.submit();
+	}
 }
