@@ -285,9 +285,15 @@
 		<url>http://wicketstuff.org/bamboo</url>
 	</ciManagement>
 	<scm>
+<<<<<<< HEAD
 		<connection>scm:svn:http://svn.apache.org/repos/asf/wicket/releases/wicket-1.4.14</connection>
 		<developerConnection>scm:svn:https://svn.apache.org/repos/asf/wicket/releases/wicket-1.4.14</developerConnection>
 		<url>http://svn.apache.org/viewvc/wicket/releases/wicket-1.4.14</url>
+=======
+		<connection>scm:svn:http://svn.apache.org/repos/asf/wicket/releases/wicket-1.4.13</connection>
+		<developerConnection>scm:svn:https://svn.apache.org/repos/asf/wicket/releases/wicket-1.4.13</developerConnection>
+		<url>http://svn.apache.org/viewvc/wicket/releases/wicket-1.4.13</url>
+>>>>>>> modify poms for 1.4.13 release
 	</scm>
 	<mailingLists>
 		<mailingList>
