@@ -157,17 +157,29 @@ public abstract class RenderedDynamicImageResource extends DynamicImageResource
 	{
 		// get image data is always called in sync block
 		byte[] data = null;
-		if (imageData != null)
+		if (imageData != null && !needsRefresh())
 		{
 			data = imageData.get();
 		}
 		if (data == null)
 		{
 			data = render();
-			imageData = new SoftReference<byte[]>(data);
-			setLastModifiedTime(Time.now());
+			if (isCacheable())
+			{
+				imageData = new SoftReference<byte[]>(data);
+				setLastModifiedTime(Time.now());
+			}
 		}
 		return data;
+	}
+
+	/**
+	 * @return <code>true</code> if the image needs to be redrawn (e.g. if the underlying model has
+	 *         changed significantly); <code>false</code> otherwise.
+	 */
+	protected boolean needsRefresh()
+	{
+		return true;
 	}
 
 	/**
