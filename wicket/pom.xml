@@ -57,6 +57,10 @@
 					<licenseLocation>${basedir}/../../../common/lib/clover.license</licenseLocation>
 				</configuration>
 			</plugin>			
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-toolchains-plugin</artifactId>
+      </plugin>
 		</plugins>
 	</build>
 </project>
