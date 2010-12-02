@@ -229,6 +229,9 @@ public abstract class Page extends MarkupContainer implements IRedirectListener,
 	/** The page parameters object hat constructed this page */
 	private PageParameters parameters;
 
+	/** Whether this page's pageInitialize event has been called */
+	private boolean pageInitializeCalled = false;
+
 	/**
 	 * Constructor.
 	 */
@@ -1287,7 +1290,7 @@ public abstract class Page extends MarkupContainer implements IRedirectListener,
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	private void setNextAvailableId()
 	{
@@ -1743,6 +1746,42 @@ public abstract class Page extends MarkupContainer implements IRedirectListener,
 		setStatelessHint(false);
 		return new PageReference(pageMapName, numericId, getCurrentVersionNumber());
 
+	}
+
+	/**
+	 * Pages can't use the regular {@link Component#onInitialize()} event, which works only for
+	 * non-page components. Use {@link #onPageInitialize()} instead, it keeps the same contract.
+	 */
+	@Override
+	protected final void onInitialize()
+	{
+		super.onInitialize();
+	}
+
+	void firePageInitializeIfNecessary()
+	{
+		if (!pageInitializeCalled)
+		{
+			onPageInitialize();
+			if (!pageInitializeCalled)
+			{
+				throw new IllegalStateException(Page.class.getName() +
+					" has not been properly initialized. Something in the hierarchy of " +
+					getClass().getName() +
+					" has not called super.onPageInitialize() in the override of onPageInitialize() method");
+			}
+		}
+	}
+
+	/**
+	 * {@link Component#onInitialize()} for Page classes. This method gives the same contract as the
+	 * regular onInitialize method, i.e. it will be called only once per object, and at some point
+	 * before {@link #onBeforeRender()} is called. You MUST call super.onPageInitialize() if you
+	 * override this method.
+	 */
+	protected void onPageInitialize()
+	{
+		pageInitializeCalled = true;
 	}
 
 }

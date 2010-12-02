@@ -68,10 +68,6 @@ public class ComponentInitializationTest extends WicketTestCase
 		// test initialization when readding a component with uninitialized children
 		page.add(t1);
 		assertEquals(1, t4.getCount());
-
-		// test page was initialized
-		assertEquals(1, page.getCount());
-
 	}
 
 	public void testAtomicity()
@@ -101,9 +97,6 @@ public class ComponentInitializationTest extends WicketTestCase
 		page.add(t1);
 		assertEquals(1, t1.getCount());
 		assertEquals(1, t2.getCount());
-
-		// test page was only initialized once
-		assertEquals(1, page.getCount());
 	}
 
 	public void testPageInitialization()
@@ -189,9 +182,9 @@ public class ComponentInitializationTest extends WicketTestCase
 		}
 
 		@Override
-		protected void onInitialize()
+		protected void onPageInitialize()
 		{
-			super.onInitialize();
+			super.onPageInitialize();
 			count++;
 			add(new Label("addedComponent",
 				"Testing addition of a component to show StackOverflowError"));
@@ -262,7 +255,7 @@ public class ComponentInitializationTest extends WicketTestCase
 
 	private static class TestInitListener implements IComponentInitializationListener
 	{
-		private List<Component> components = new ArrayList<Component>();
+		private final List<Component> components = new ArrayList<Component>();
 
 		public void onInitialize(Component component)
 		{

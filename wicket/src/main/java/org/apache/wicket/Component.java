@@ -1053,7 +1053,7 @@ public abstract class Component implements IClusterable, IConverterLocator
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	private final void internalBeforeRender()
 	{
@@ -1102,6 +1102,16 @@ public abstract class Component implements IClusterable, IConverterLocator
 	 */
 	public final void beforeRender()
 	{
+		if (this instanceof Page)
+		{
+			/*
+			 * Page can't use the normal onInitialize call, so we need to fire the pageInitialize
+			 * event separately.
+			 * 
+			 * @see Page#onInitialize()
+			 */
+			((Page)this).firePageInitializeIfNecessary();
+		}
 		if (!(this instanceof IFeedback))
 		{
 			internalBeforeRender();
@@ -4477,7 +4487,7 @@ public abstract class Component implements IClusterable, IConverterLocator
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	void onAfterRenderChildren()
 	{
