@@ -20,13 +20,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.wicket.application.IComponentInitializationListener;
-import org.apache.wicket.markup.IMarkupResourceStreamProvider;
 import org.apache.wicket.markup.html.WebComponent;
 import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.WebPage;
-import org.apache.wicket.markup.html.basic.Label;
-import org.apache.wicket.util.resource.IResourceStream;
-import org.apache.wicket.util.resource.StringResourceStream;
+import org.apache.wicket.markup.html.link.Link;
 import org.apache.wicket.util.tester.WicketTester;
 
 /**
@@ -36,99 +33,105 @@ import org.apache.wicket.util.tester.WicketTester;
  */
 public class ComponentInitializationTest extends WicketTestCase
 {
-	public void testPropagation()
+
+	public static abstract class SuperPage extends WebPage
 	{
-		TestPage page = new TestPage();
+		private boolean subclassCallWorked = false;
+		private int pageInitializeCount = 0;
+		final TestComponent outerContainer;
+		TestComponent innerComponent;
+		private TestComponent onInitializeContainer;
+		private TestComponent onInitializeComponent;
+		private TestComponent onBeforeRenderContainer;
+		private TestComponent onBeforeRenderComponent;
+		private final Link<Void> link;
 
-		TestComponent t1 = new TestComponent("t1");
-		TestComponent t2 = new TestComponent("t2");
-		TestComponent t3 = new TestComponent("t3");
-		TestComponent t4 = new TestComponent("t4");
+		public SuperPage()
+		{
+			outerContainer = new TestComponent("outerContainer");
+			add(outerContainer);
+			innerComponent = new TestComponent("innerComponent");
+			outerContainer.add(innerComponent);
+			link = new Link<Void>("refreshLink")
+			{
+				@Override
+				public void onClick()
+				{
+					; // just re-render page
+				}
+			};
+			add(link);
+		}
 
-		// as soon as we add to page child should be initialized
-		page.add(t1);
-		assertEquals(1, t1.getCount());
+		@Override
+		protected void onInitialize()
+		{
+			super.onInitialize();
+			subclassCallWorked = getSomeInformationFromSubclasses();
+			onInitializeContainer = new TestComponent("onInitializeContainer");
+			onInitializeComponent = new TestComponent("onInitializeComponent");
+			onInitializeContainer.add(onInitializeComponent);
+			outerContainer.add(onInitializeContainer);
+			pageInitializeCount++;
+		}
 
-		// unless the page is available no initialization takes place
-		t2.add(t3);
-		assertEquals(0, t2.getCount());
-		assertEquals(0, t3.getCount());
+		private boolean beforeRenderComponentsAdded = false;
 
-		// initialization cascades from initialized
-		t1.add(t2);
-		assertEquals(1, t1.getCount());
-		assertEquals(1, t2.getCount());
-		assertEquals(1, t3.getCount());
+		@Override
+		protected void onBeforeRender()
+		{
+			super.onBeforeRender();
+			assertTrue(getFlag(FLAG_INITIALIZED));
+			if (!beforeRenderComponentsAdded)
+			{
+				onBeforeRenderContainer = new TestComponent("onBeforeRenderContainer");
+				onBeforeRenderComponent = new TestComponent("onBeforeRenderComponent");
+				onBeforeRenderContainer.add(onBeforeRenderComponent);
+				onInitializeContainer.add(onBeforeRenderContainer);
+				beforeRenderComponentsAdded = true;
+			}
+		}
 
-		// test intialization when adding to removed components
-		page.remove(t1);
-		t3.add(t4);
-		assertEquals(0, t4.getCount());
+		protected abstract boolean getSomeInformationFromSubclasses();
+	}
 
-		// test initialization when readding a component with uninitialized children
-		page.add(t1);
-		assertEquals(1, t4.getCount());
+	public static class SubPage extends SuperPage
+	{
+		private final boolean constructorHasBeenRun;
 
-		// test page was initialized
-		assertEquals(1, page.getCount());
+		public SubPage()
+		{
+			constructorHasBeenRun = true;
+		}
+
+		@Override
+		protected boolean getSomeInformationFromSubclasses()
+		{
+			assertTrue(constructorHasBeenRun);
+			return true;
+		}
 
 	}
 
-	public void testAtomicity()
+	public static class BadPage extends SubPage
 	{
-		TestPage page = new TestPage();
-
-		TestComponent t1 = new TestComponent("t1");
-		TestComponent t2 = new TestComponent("t2");
-		TestComponent t3 = new TestComponent("t3");
-
-		t1.add(t2);
-		t2.add(t3);
-
-		page.add(t1);
-
-		assertEquals(1, t1.getCount());
-		assertEquals(1, t2.getCount());
-		assertEquals(1, t3.getCount());
-
-		// test moving
-		page.add(t3);
-		assertEquals(1, t3.getCount());
-
-		// test removal and readdition
-		page.remove(t1);
-		assertEquals(1, t1.getCount());
-		page.add(t1);
-		assertEquals(1, t1.getCount());
-		assertEquals(1, t2.getCount());
-
-		// test page was only initialized once
-		assertEquals(1, page.getCount());
+		@Override
+		protected void onInitialize()
+		{
+			super.onInitialize();
+			innerComponent.replaceWith(new InvalidComponent("innerComponent"));
+		}
 	}
 
 	public void testPageInitialization()
 	{
 		WicketTester tester = new WicketTester();
-		tester.startPage(TestPage.class);
-		TestPage page = (TestPage)tester.getLastRenderedPage();
+		tester.startPage(SubPage.class);
+		SuperPage page = (SuperPage)tester.getLastRenderedPage();
 
-		assertEquals(1, page.getCount());
+		assertEquals(1, page.pageInitializeCount);
 	}
 
-	public void testOnInitializeSuperVerified()
-	{
-		TestPage page = new TestPage();
-		boolean illegalState = false;
-		try
-		{
-			page.add(new InvalidComponent("addedComponent"));
-		}
-		catch (IllegalStateException e)
-		{
-			illegalState = true;
-		}
-		assertTrue(illegalState);
-	}
 
 	public void testInitListeners()
 	{
@@ -137,21 +140,23 @@ public class ComponentInitializationTest extends WicketTestCase
 		tester.getApplication().addComponentInitializationListener(listener1);
 		tester.getApplication().addComponentInitializationListener(listener2);
 
-		WebPage page = new WebPage()
-		{
-		};
-		TestComponent t1 = new TestComponent("t1");
-		TestComponent t2 = new TestComponent("t2");
-
-		t1.add(t2);
-		page.add(t1);
+		tester.startPage(SubPage.class);
+		SuperPage page = (SuperPage)tester.getLastRenderedPage();
 
 		assertTrue(listener1.getComponents().contains(page));
-		assertTrue(listener1.getComponents().contains(t1));
-		assertTrue(listener1.getComponents().contains(t2));
+		assertTrue(listener1.getComponents().contains(page.outerContainer));
+		assertTrue(listener1.getComponents().contains(page.onBeforeRenderComponent));
+		assertTrue(listener1.getComponents().contains(page.onBeforeRenderContainer));
+		assertTrue(listener1.getComponents().contains(page.innerComponent));
+		assertTrue(listener1.getComponents().contains(page.onInitializeComponent));
+		assertTrue(listener1.getComponents().contains(page.onInitializeContainer));
 		assertTrue(listener2.getComponents().contains(page));
-		assertTrue(listener2.getComponents().contains(t1));
-		assertTrue(listener2.getComponents().contains(t2));
+		assertTrue(listener2.getComponents().contains(page.outerContainer));
+		assertTrue(listener2.getComponents().contains(page.onBeforeRenderComponent));
+		assertTrue(listener2.getComponents().contains(page.onBeforeRenderContainer));
+		assertTrue(listener2.getComponents().contains(page.innerComponent));
+		assertTrue(listener2.getComponents().contains(page.onInitializeComponent));
+		assertTrue(listener2.getComponents().contains(page.onInitializeContainer));
 	}
 
 	public void testInitializationOrder()
@@ -159,56 +164,70 @@ public class ComponentInitializationTest extends WicketTestCase
 		TestInitListener listener1 = new TestInitListener();
 		tester.getApplication().addComponentInitializationListener(listener1);
 
-		WebPage page = new WebPage()
-		{
-		};
-		TestComponent t1 = new TestComponent("t1");
-		TestComponent t2 = new TestComponent("t2");
-		TestComponent t3 = new TestComponent("t3");
-		TestComponent t4 = new TestComponent("t4");
-
-		t1.add(t2);
-		page.add(t1);
-		t1.add(t3);
-		t3.add(t4);
+		SuperPage page = (SuperPage)tester.startPage(SubPage.class);
 
 		assertTrue(page == listener1.getComponents().get(0));
-		assertTrue(t1 == listener1.getComponents().get(1));
-		assertTrue(t2 == listener1.getComponents().get(2));
-		assertTrue(t3 == listener1.getComponents().get(3));
-		assertTrue(t4 == listener1.getComponents().get(4));
+		assertTrue(page.outerContainer == listener1.getComponents().get(1));
+		assertTrue(page.innerComponent == listener1.getComponents().get(2));
+		assertTrue(page.onInitializeContainer == listener1.getComponents().get(3));
+		assertTrue(page.onInitializeComponent == listener1.getComponents().get(4));
+		// link should come after everything inside outerContainer
+		assertTrue(page.link == listener1.getComponents().get(5));
+		/*
+		 * onBeforeRender components are added after the first onInitialize, so they should be
+		 * initialized last, but in the correct order
+		 */
+		assertTrue(page.onBeforeRenderContainer == listener1.getComponents().get(6));
+		assertTrue(page.onBeforeRenderComponent == listener1.getComponents().get(7));
 	}
 
-
-	public static class TestPage extends WebPage implements IMarkupResourceStreamProvider
+	public void testInitializeOnlyOnce()
 	{
-		private int count = 0;
+		SuperPage page = (SuperPage)tester.startPage(SubPage.class);
+		assertEquals(1, page.pageInitializeCount);
+		assertEquals(1, page.outerContainer.getCount());
+		assertEquals(1, page.onBeforeRenderComponent.getCount());
+		assertEquals(1, page.onBeforeRenderContainer.getCount());
+		assertEquals(1, page.innerComponent.getCount());
+		assertEquals(1, page.onInitializeComponent.getCount());
+		assertEquals(1, page.onInitializeContainer.getCount());
+	}
 
-		public TestPage()
+	public void testDontInitializeAgainAfterRedraw()
+	{
+		SuperPage page = (SuperPage)tester.startPage(SubPage.class);
+		assertEquals(1, page.pageInitializeCount);
+		assertEquals(1, page.outerContainer.getCount());
+		assertEquals(1, page.onBeforeRenderComponent.getCount());
+		assertEquals(1, page.onBeforeRenderContainer.getCount());
+		assertEquals(1, page.innerComponent.getCount());
+		assertEquals(1, page.onInitializeComponent.getCount());
+		assertEquals(1, page.onInitializeContainer.getCount());
+		tester.clickLink("refreshLink");
+		page = (SuperPage)tester.getLastRenderedPage();
+		assertEquals(1, page.pageInitializeCount);
+		assertEquals(1, page.outerContainer.getCount());
+		assertEquals(1, page.onBeforeRenderComponent.getCount());
+		assertEquals(1, page.onBeforeRenderContainer.getCount());
+		assertEquals(1, page.innerComponent.getCount());
+		assertEquals(1, page.onInitializeComponent.getCount());
+		assertEquals(1, page.onInitializeContainer.getCount());
+	}
+
+	public void testCatchBadInitializeMethod()
+	{
+		try
 		{
+			tester.startPage(BadPage.class);
+			fail("should have failed");
 		}
-
-		@Override
-		protected void onInitialize()
+		catch (IllegalStateException e)
 		{
-			super.onInitialize();
-			count++;
-			add(new Label("addedComponent",
-				"Testing addition of a component to show StackOverflowError"));
-		}
-
-		public int getCount()
-		{
-			return count;
-		}
-
-		public IResourceStream getMarkupResourceStream(MarkupContainer container,
-			Class<?> containerClass)
-		{
-			return new StringResourceStream(
-				"<html><body><span wicket:id=\"addedComponent\"></span></body></html>");
+			assertTrue(e.getMessage().contains("onInitialize"));
+			assertTrue(e.getMessage().contains("InvalidComponent"));
 		}
 	}
+
 
 	private static class TestComponent extends WebMarkupContainer
 	{
@@ -262,7 +281,7 @@ public class ComponentInitializationTest extends WicketTestCase
 
 	private static class TestInitListener implements IComponentInitializationListener
 	{
-		private List<Component> components = new ArrayList<Component>();
+		private final List<Component> components = new ArrayList<Component>();
 
 		public void onInitialize(Component component)
 		{

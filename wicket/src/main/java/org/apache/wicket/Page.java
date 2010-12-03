@@ -1287,7 +1287,7 @@ public abstract class Page extends MarkupContainer implements IRedirectListener,
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	private void setNextAvailableId()
 	{
@@ -1602,10 +1602,12 @@ public abstract class Page extends MarkupContainer implements IRedirectListener,
 	 */
 	final void componentAdded(final Component component)
 	{
-		if (!getFlag(Component.FLAG_INITIALIZED))
+		// if the page has already been initialized, the new component needs to be initialized too.
+		// if the page is not initialized yet, the new component will be initialized with the page
+		// just before configure.
+		if (getFlag(FLAG_INITIALIZED))
 		{
-			// initialize the page if not yet initialized
-			initialize();
+			component.initialize();
 		}
 		dirty();
 		if (mayTrackChangesFor(component, component.getParent()))

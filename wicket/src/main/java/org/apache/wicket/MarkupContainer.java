@@ -974,11 +974,6 @@ public abstract class MarkupContainer extends Component
 			page.componentAdded(component);
 		}
 
-		if (page != null)
-		{
-			component.initialize();
-		}
-
 		// if the PREPARED_FOR_RENDER flag is set, we have already called
 		// beforeRender on this
 		// component's children. So we need to initialize the newly added one
@@ -1623,7 +1618,7 @@ public abstract class MarkupContainer extends Component
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	private static class ComponentSourceEntry extends org.apache.wicket.ComponentSourceEntry
 	{
@@ -1833,7 +1828,7 @@ public abstract class MarkupContainer extends Component
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	private static class ChildList extends AbstractList<Object> implements IClusterable
 	{

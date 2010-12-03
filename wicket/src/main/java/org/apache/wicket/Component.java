@@ -664,6 +664,11 @@ public abstract class Component implements IClusterable, IConverterLocator
 	private static final int FLAG_DETACHING = 0x80000000;
 
 	/**
+	 * FLAG_INITIALIZED is set after initializing is done, this is set during intitialization.
+	 */
+	private static final long FLAG_INITIALIZING = 0x100000000l;
+
+	/**
 	 * The name of attribute that will hold markup id
 	 */
 	private static final String MARKUP_ID_ATTR_NAME = "id";
@@ -697,7 +702,7 @@ public abstract class Component implements IClusterable, IConverterLocator
 	};
 
 	/** Component flags. See FLAG_* for possible non-exclusive flag values. */
-	private int flags = FLAG_VISIBLE | FLAG_ESCAPE_MODEL_STRINGS | FLAG_VERSIONED | FLAG_ENABLED |
+	private long flags = FLAG_VISIBLE | FLAG_ESCAPE_MODEL_STRINGS | FLAG_VERSIONED | FLAG_ENABLED |
 		FLAG_IS_RENDER_ALLOWED | FLAG_VISIBILITY_ALLOWED;
 
 	/** Component id. */
@@ -1053,10 +1058,19 @@ public abstract class Component implements IClusterable, IConverterLocator
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	private final void internalBeforeRender()
 	{
+		/*
+		 * The component needs to be initialized. Doing it here is the latest point possible before
+		 * the configure() step, since that is what the onInitialize contract requires.
+		 */
+		if (!getFlag(FLAG_INITIALIZED))
+		{
+			initialize();
+		}
+
 		configure();
 
 		if ((determineVisibility() || callOnBeforeRenderIfNotVisible()) &&
@@ -3703,7 +3717,7 @@ public abstract class Component implements IClusterable, IConverterLocator
 	 *            The flag to test
 	 * @return True if the flag is set
 	 */
-	protected final boolean getFlag(final int flag)
+	protected final boolean getFlag(final long flag)
 	{
 		return (flags & flag) != 0;
 	}
@@ -4041,9 +4055,9 @@ public abstract class Component implements IClusterable, IConverterLocator
 	 */
 	final void fireInitialize()
 	{
-		if (!getFlag(FLAG_INITIALIZED))
+		if (!getFlag(FLAG_INITIALIZED) && !getFlag(FLAG_INITIALIZING))
 		{
-			setFlag(FLAG_INITIALIZED, true);
+			setFlag(FLAG_INITIALIZING, true);
 			setFlag(FLAG_INITIALIZE_SUPER_CALL_VERIFIED, false);
 			onInitialize();
 			if (!getFlag(FLAG_INITIALIZE_SUPER_CALL_VERIFIED))
@@ -4056,6 +4070,8 @@ public abstract class Component implements IClusterable, IConverterLocator
 			setFlag(FLAG_INITIALIZE_SUPER_CALL_VERIFIED, false);
 
 			getApplication().fireComponentInitializationListeners(this);
+			setFlag(FLAG_INITIALIZED, true);
+			setFlag(FLAG_INITIALIZING, false);
 		}
 	}
 
@@ -4325,7 +4341,7 @@ public abstract class Component implements IClusterable, IConverterLocator
 	 * @param set
 	 *            True to turn the flag on, false to turn it off
 	 */
-	protected final void setFlag(final int flag, final boolean set)
+	protected final void setFlag(final long flag, final boolean set)
 	{
 		if (set)
 		{
@@ -4477,7 +4493,7 @@ public abstract class Component implements IClusterable, IConverterLocator
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	void onAfterRenderChildren()
 	{
