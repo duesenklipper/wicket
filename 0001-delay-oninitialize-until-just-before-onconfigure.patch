@@ -1,0 +1,566 @@
+From 19029618068f688dd63b0f921f8ce50966c961dc Mon Sep 17 00:00:00 2001
+From: Carl-Eric Menzel <cmenzel@wicketbuch.de>
+Date: Fri, 3 Dec 2010 01:16:47 +0100
+Subject: [PATCH] delay oninitialize until just before onconfigure
+
+---
+ .../src/main/java/org/apache/wicket/Component.java |   30 ++-
+ .../java/org/apache/wicket/MarkupContainer.java    |    9 +-
+ wicket/src/main/java/org/apache/wicket/Page.java   |   10 +-
+ .../ComponentInitializationTest$SuperPage.html     |   12 +
+ .../apache/wicket/ComponentInitializationTest.java |  275 +++++++++++---------
+ ...WicketComponentTreeTestPage_ExpectedResult.html |    4 +-
+ 6 files changed, 192 insertions(+), 148 deletions(-)
+ create mode 100644 wicket/src/test/java/org/apache/wicket/ComponentInitializationTest$SuperPage.html
+
+diff --git a/wicket/src/main/java/org/apache/wicket/Component.java b/wicket/src/main/java/org/apache/wicket/Component.java
+index c42756d..ee182b7 100644
+--- a/wicket/src/main/java/org/apache/wicket/Component.java
++++ b/wicket/src/main/java/org/apache/wicket/Component.java
+@@ -664,6 +664,11 @@ public abstract class Component implements IClusterable, IConverterLocator
+ 	private static final int FLAG_DETACHING = 0x80000000;
+ 
+ 	/**
++	 * FLAG_INITIALIZED is set after initializing is done, this is set during intitialization.
++	 */
++	private static final long FLAG_INITIALIZING = 0x100000000l;
++
++	/**
+ 	 * The name of attribute that will hold markup id
+ 	 */
+ 	private static final String MARKUP_ID_ATTR_NAME = "id";
+@@ -697,7 +702,7 @@ public abstract class Component implements IClusterable, IConverterLocator
+ 	};
+ 
+ 	/** Component flags. See FLAG_* for possible non-exclusive flag values. */
+-	private int flags = FLAG_VISIBLE | FLAG_ESCAPE_MODEL_STRINGS | FLAG_VERSIONED | FLAG_ENABLED |
++	private long flags = FLAG_VISIBLE | FLAG_ESCAPE_MODEL_STRINGS | FLAG_VERSIONED | FLAG_ENABLED |
+ 		FLAG_IS_RENDER_ALLOWED | FLAG_VISIBILITY_ALLOWED;
+ 
+ 	/** Component id. */
+@@ -1053,10 +1058,19 @@ public abstract class Component implements IClusterable, IConverterLocator
+ 	}
+ 
+ 	/**
+-	 * 
++	 *
+ 	 */
+ 	private final void internalBeforeRender()
+ 	{
++		/*
++		 * The component needs to be initialized. Doing it here is the latest point possible before
++		 * the configure() step, since that is what the onInitialize contract requires.
++		 */
++		if (!getFlag(FLAG_INITIALIZED))
++		{
++			initialize();
++		}
++
+ 		configure();
+ 
+ 		if ((determineVisibility() || callOnBeforeRenderIfNotVisible()) &&
+@@ -3703,7 +3717,7 @@ public abstract class Component implements IClusterable, IConverterLocator
+ 	 *            The flag to test
+ 	 * @return True if the flag is set
+ 	 */
+-	protected final boolean getFlag(final int flag)
++	protected final boolean getFlag(final long flag)
+ 	{
+ 		return (flags & flag) != 0;
+ 	}
+@@ -4041,9 +4055,9 @@ public abstract class Component implements IClusterable, IConverterLocator
+ 	 */
+ 	final void fireInitialize()
+ 	{
+-		if (!getFlag(FLAG_INITIALIZED))
++		if (!getFlag(FLAG_INITIALIZED) && !getFlag(FLAG_INITIALIZING))
+ 		{
+-			setFlag(FLAG_INITIALIZED, true);
++			setFlag(FLAG_INITIALIZING, true);
+ 			setFlag(FLAG_INITIALIZE_SUPER_CALL_VERIFIED, false);
+ 			onInitialize();
+ 			if (!getFlag(FLAG_INITIALIZE_SUPER_CALL_VERIFIED))
+@@ -4056,6 +4070,8 @@ public abstract class Component implements IClusterable, IConverterLocator
+ 			setFlag(FLAG_INITIALIZE_SUPER_CALL_VERIFIED, false);
+ 
+ 			getApplication().fireComponentInitializationListeners(this);
++			setFlag(FLAG_INITIALIZED, true);
++			setFlag(FLAG_INITIALIZING, false);
+ 		}
+ 	}
+ 
+@@ -4325,7 +4341,7 @@ public abstract class Component implements IClusterable, IConverterLocator
+ 	 * @param set
+ 	 *            True to turn the flag on, false to turn it off
+ 	 */
+-	protected final void setFlag(final int flag, final boolean set)
++	protected final void setFlag(final long flag, final boolean set)
+ 	{
+ 		if (set)
+ 		{
+@@ -4477,7 +4493,7 @@ public abstract class Component implements IClusterable, IConverterLocator
+ 	}
+ 
+ 	/**
+-	 * 
++	 *
+ 	 */
+ 	void onAfterRenderChildren()
+ 	{
+diff --git a/wicket/src/main/java/org/apache/wicket/MarkupContainer.java b/wicket/src/main/java/org/apache/wicket/MarkupContainer.java
+index 357c14c..101b42c 100644
+--- a/wicket/src/main/java/org/apache/wicket/MarkupContainer.java
++++ b/wicket/src/main/java/org/apache/wicket/MarkupContainer.java
+@@ -974,11 +974,6 @@ public abstract class MarkupContainer extends Component
+ 			page.componentAdded(component);
+ 		}
+ 
+-		if (page != null)
+-		{
+-			component.initialize();
+-		}
+-
+ 		// if the PREPARED_FOR_RENDER flag is set, we have already called
+ 		// beforeRender on this
+ 		// component's children. So we need to initialize the newly added one
+@@ -1623,7 +1618,7 @@ public abstract class MarkupContainer extends Component
+ 	}
+ 
+ 	/**
+-	 * 
++	 *
+ 	 */
+ 	private static class ComponentSourceEntry extends org.apache.wicket.ComponentSourceEntry
+ 	{
+@@ -1833,7 +1828,7 @@ public abstract class MarkupContainer extends Component
+ 	}
+ 
+ 	/**
+-	 * 
++	 *
+ 	 */
+ 	private static class ChildList extends AbstractList<Object> implements IClusterable
+ 	{
+diff --git a/wicket/src/main/java/org/apache/wicket/Page.java b/wicket/src/main/java/org/apache/wicket/Page.java
+index b7bcd6b..b615722 100644
+--- a/wicket/src/main/java/org/apache/wicket/Page.java
++++ b/wicket/src/main/java/org/apache/wicket/Page.java
+@@ -1287,7 +1287,7 @@ public abstract class Page extends MarkupContainer implements IRedirectListener,
+ 	}
+ 
+ 	/**
+-	 * 
++	 *
+ 	 */
+ 	private void setNextAvailableId()
+ 	{
+@@ -1602,10 +1602,12 @@ public abstract class Page extends MarkupContainer implements IRedirectListener,
+ 	 */
+ 	final void componentAdded(final Component component)
+ 	{
+-		if (!getFlag(Component.FLAG_INITIALIZED))
++		// if the page has already been initialized, the new component needs to be initialized too.
++		// if the page is not initialized yet, the new component will be initialized with the page
++		// just before configure.
++		if (getFlag(FLAG_INITIALIZED))
+ 		{
+-			// initialize the page if not yet initialized
+-			initialize();
++			component.initialize();
+ 		}
+ 		dirty();
+ 		if (mayTrackChangesFor(component, component.getParent()))
+diff --git a/wicket/src/test/java/org/apache/wicket/ComponentInitializationTest$SuperPage.html b/wicket/src/test/java/org/apache/wicket/ComponentInitializationTest$SuperPage.html
+new file mode 100644
+index 0000000..78fdc49
+--- /dev/null
++++ b/wicket/src/test/java/org/apache/wicket/ComponentInitializationTest$SuperPage.html
+@@ -0,0 +1,12 @@
++<html>
++    <div wicket:id="outerContainer">
++        <span wicket:id="innerComponent"></span>
++        <div wicket:id="onInitializeContainer">
++            <div wicket:id="onInitializeComponent"></div>
++            <div wicket:id="onBeforeRenderContainer">
++                <div wicket:id="onBeforeRenderComponent"></div>
++            </div>
++        </div>
++    </div>
++    <a href="" wicket:id="refreshLink"></a>
++</html>
+diff --git a/wicket/src/test/java/org/apache/wicket/ComponentInitializationTest.java b/wicket/src/test/java/org/apache/wicket/ComponentInitializationTest.java
+index 25c81f4..2007afd 100644
+--- a/wicket/src/test/java/org/apache/wicket/ComponentInitializationTest.java
++++ b/wicket/src/test/java/org/apache/wicket/ComponentInitializationTest.java
+@@ -20,13 +20,10 @@ import java.util.ArrayList;
+ import java.util.List;
+ 
+ import org.apache.wicket.application.IComponentInitializationListener;
+-import org.apache.wicket.markup.IMarkupResourceStreamProvider;
+ import org.apache.wicket.markup.html.WebComponent;
+ import org.apache.wicket.markup.html.WebMarkupContainer;
+ import org.apache.wicket.markup.html.WebPage;
+-import org.apache.wicket.markup.html.basic.Label;
+-import org.apache.wicket.util.resource.IResourceStream;
+-import org.apache.wicket.util.resource.StringResourceStream;
++import org.apache.wicket.markup.html.link.Link;
+ import org.apache.wicket.util.tester.WicketTester;
+ 
+ /**
+@@ -36,99 +33,105 @@ import org.apache.wicket.util.tester.WicketTester;
+  */
+ public class ComponentInitializationTest extends WicketTestCase
+ {
+-	public void testPropagation()
+-	{
+-		TestPage page = new TestPage();
+-
+-		TestComponent t1 = new TestComponent("t1");
+-		TestComponent t2 = new TestComponent("t2");
+-		TestComponent t3 = new TestComponent("t3");
+-		TestComponent t4 = new TestComponent("t4");
+-
+-		// as soon as we add to page child should be initialized
+-		page.add(t1);
+-		assertEquals(1, t1.getCount());
+ 
+-		// unless the page is available no initialization takes place
+-		t2.add(t3);
+-		assertEquals(0, t2.getCount());
+-		assertEquals(0, t3.getCount());
+-
+-		// initialization cascades from initialized
+-		t1.add(t2);
+-		assertEquals(1, t1.getCount());
+-		assertEquals(1, t2.getCount());
+-		assertEquals(1, t3.getCount());
++	public static abstract class SuperPage extends WebPage
++	{
++		private boolean subclassCallWorked = false;
++		private int pageInitializeCount = 0;
++		final TestComponent outerContainer;
++		TestComponent innerComponent;
++		private TestComponent onInitializeContainer;
++		private TestComponent onInitializeComponent;
++		private TestComponent onBeforeRenderContainer;
++		private TestComponent onBeforeRenderComponent;
++		private final Link<Void> link;
++
++		public SuperPage()
++		{
++			outerContainer = new TestComponent("outerContainer");
++			add(outerContainer);
++			innerComponent = new TestComponent("innerComponent");
++			outerContainer.add(innerComponent);
++			link = new Link<Void>("refreshLink")
++			{
++				@Override
++				public void onClick()
++				{
++					; // just re-render page
++				}
++			};
++			add(link);
++		}
+ 
+-		// test intialization when adding to removed components
+-		page.remove(t1);
+-		t3.add(t4);
+-		assertEquals(0, t4.getCount());
++		@Override
++		protected void onInitialize()
++		{
++			super.onInitialize();
++			subclassCallWorked = getSomeInformationFromSubclasses();
++			onInitializeContainer = new TestComponent("onInitializeContainer");
++			onInitializeComponent = new TestComponent("onInitializeComponent");
++			onInitializeContainer.add(onInitializeComponent);
++			outerContainer.add(onInitializeContainer);
++			pageInitializeCount++;
++		}
+ 
+-		// test initialization when readding a component with uninitialized children
+-		page.add(t1);
+-		assertEquals(1, t4.getCount());
++		private boolean beforeRenderComponentsAdded = false;
+ 
+-		// test page was initialized
+-		assertEquals(1, page.getCount());
++		@Override
++		protected void onBeforeRender()
++		{
++			super.onBeforeRender();
++			assertTrue(getFlag(FLAG_INITIALIZED));
++			if (!beforeRenderComponentsAdded)
++			{
++				onBeforeRenderContainer = new TestComponent("onBeforeRenderContainer");
++				onBeforeRenderComponent = new TestComponent("onBeforeRenderComponent");
++				onBeforeRenderContainer.add(onBeforeRenderComponent);
++				onInitializeContainer.add(onBeforeRenderContainer);
++				beforeRenderComponentsAdded = true;
++			}
++		}
+ 
++		protected abstract boolean getSomeInformationFromSubclasses();
+ 	}
+ 
+-	public void testAtomicity()
++	public static class SubPage extends SuperPage
+ 	{
+-		TestPage page = new TestPage();
+-
+-		TestComponent t1 = new TestComponent("t1");
+-		TestComponent t2 = new TestComponent("t2");
+-		TestComponent t3 = new TestComponent("t3");
+-
+-		t1.add(t2);
+-		t2.add(t3);
++		private final boolean constructorHasBeenRun;
+ 
+-		page.add(t1);
+-
+-		assertEquals(1, t1.getCount());
+-		assertEquals(1, t2.getCount());
+-		assertEquals(1, t3.getCount());
++		public SubPage()
++		{
++			constructorHasBeenRun = true;
++		}
+ 
+-		// test moving
+-		page.add(t3);
+-		assertEquals(1, t3.getCount());
++		@Override
++		protected boolean getSomeInformationFromSubclasses()
++		{
++			assertTrue(constructorHasBeenRun);
++			return true;
++		}
+ 
+-		// test removal and readdition
+-		page.remove(t1);
+-		assertEquals(1, t1.getCount());
+-		page.add(t1);
+-		assertEquals(1, t1.getCount());
+-		assertEquals(1, t2.getCount());
++	}
+ 
+-		// test page was only initialized once
+-		assertEquals(1, page.getCount());
++	public static class BadPage extends SubPage
++	{
++		@Override
++		protected void onInitialize()
++		{
++			super.onInitialize();
++			innerComponent.replaceWith(new InvalidComponent("innerComponent"));
++		}
+ 	}
+ 
+ 	public void testPageInitialization()
+ 	{
+ 		WicketTester tester = new WicketTester();
+-		tester.startPage(TestPage.class);
+-		TestPage page = (TestPage)tester.getLastRenderedPage();
++		tester.startPage(SubPage.class);
++		SuperPage page = (SuperPage)tester.getLastRenderedPage();
+ 
+-		assertEquals(1, page.getCount());
++		assertEquals(1, page.pageInitializeCount);
+ 	}
+ 
+-	public void testOnInitializeSuperVerified()
+-	{
+-		TestPage page = new TestPage();
+-		boolean illegalState = false;
+-		try
+-		{
+-			page.add(new InvalidComponent("addedComponent"));
+-		}
+-		catch (IllegalStateException e)
+-		{
+-			illegalState = true;
+-		}
+-		assertTrue(illegalState);
+-	}
+ 
+ 	public void testInitListeners()
+ 	{
+@@ -137,21 +140,23 @@ public class ComponentInitializationTest extends WicketTestCase
+ 		tester.getApplication().addComponentInitializationListener(listener1);
+ 		tester.getApplication().addComponentInitializationListener(listener2);
+ 
+-		WebPage page = new WebPage()
+-		{
+-		};
+-		TestComponent t1 = new TestComponent("t1");
+-		TestComponent t2 = new TestComponent("t2");
+-
+-		t1.add(t2);
+-		page.add(t1);
++		tester.startPage(SubPage.class);
++		SuperPage page = (SuperPage)tester.getLastRenderedPage();
+ 
+ 		assertTrue(listener1.getComponents().contains(page));
+-		assertTrue(listener1.getComponents().contains(t1));
+-		assertTrue(listener1.getComponents().contains(t2));
++		assertTrue(listener1.getComponents().contains(page.outerContainer));
++		assertTrue(listener1.getComponents().contains(page.onBeforeRenderComponent));
++		assertTrue(listener1.getComponents().contains(page.onBeforeRenderContainer));
++		assertTrue(listener1.getComponents().contains(page.innerComponent));
++		assertTrue(listener1.getComponents().contains(page.onInitializeComponent));
++		assertTrue(listener1.getComponents().contains(page.onInitializeContainer));
+ 		assertTrue(listener2.getComponents().contains(page));
+-		assertTrue(listener2.getComponents().contains(t1));
+-		assertTrue(listener2.getComponents().contains(t2));
++		assertTrue(listener2.getComponents().contains(page.outerContainer));
++		assertTrue(listener2.getComponents().contains(page.onBeforeRenderComponent));
++		assertTrue(listener2.getComponents().contains(page.onBeforeRenderContainer));
++		assertTrue(listener2.getComponents().contains(page.innerComponent));
++		assertTrue(listener2.getComponents().contains(page.onInitializeComponent));
++		assertTrue(listener2.getComponents().contains(page.onInitializeContainer));
+ 	}
+ 
+ 	public void testInitializationOrder()
+@@ -159,57 +164,71 @@ public class ComponentInitializationTest extends WicketTestCase
+ 		TestInitListener listener1 = new TestInitListener();
+ 		tester.getApplication().addComponentInitializationListener(listener1);
+ 
+-		WebPage page = new WebPage()
+-		{
+-		};
+-		TestComponent t1 = new TestComponent("t1");
+-		TestComponent t2 = new TestComponent("t2");
+-		TestComponent t3 = new TestComponent("t3");
+-		TestComponent t4 = new TestComponent("t4");
+-
+-		t1.add(t2);
+-		page.add(t1);
+-		t1.add(t3);
+-		t3.add(t4);
++		SuperPage page = (SuperPage)tester.startPage(SubPage.class);
+ 
+ 		assertTrue(page == listener1.getComponents().get(0));
+-		assertTrue(t1 == listener1.getComponents().get(1));
+-		assertTrue(t2 == listener1.getComponents().get(2));
+-		assertTrue(t3 == listener1.getComponents().get(3));
+-		assertTrue(t4 == listener1.getComponents().get(4));
++		assertTrue(page.outerContainer == listener1.getComponents().get(1));
++		assertTrue(page.innerComponent == listener1.getComponents().get(2));
++		assertTrue(page.onInitializeContainer == listener1.getComponents().get(3));
++		assertTrue(page.onInitializeComponent == listener1.getComponents().get(4));
++		// link should come after everything inside outerContainer
++		assertTrue(page.link == listener1.getComponents().get(5));
++		/*
++		 * onBeforeRender components are added after the first onInitialize, so they should be
++		 * initialized last, but in the correct order
++		 */
++		assertTrue(page.onBeforeRenderContainer == listener1.getComponents().get(6));
++		assertTrue(page.onBeforeRenderComponent == listener1.getComponents().get(7));
+ 	}
+ 
+-
+-	public static class TestPage extends WebPage implements IMarkupResourceStreamProvider
++	public void testInitializeOnlyOnce()
+ 	{
+-		private int count = 0;
+-
+-		public TestPage()
+-		{
+-		}
++		SuperPage page = (SuperPage)tester.startPage(SubPage.class);
++		assertEquals(1, page.pageInitializeCount);
++		assertEquals(1, page.outerContainer.getCount());
++		assertEquals(1, page.onBeforeRenderComponent.getCount());
++		assertEquals(1, page.onBeforeRenderContainer.getCount());
++		assertEquals(1, page.innerComponent.getCount());
++		assertEquals(1, page.onInitializeComponent.getCount());
++		assertEquals(1, page.onInitializeContainer.getCount());
++	}
+ 
+-		@Override
+-		protected void onInitialize()
+-		{
+-			super.onInitialize();
+-			count++;
+-			add(new Label("addedComponent",
+-				"Testing addition of a component to show StackOverflowError"));
+-		}
++	public void testDontInitializeAgainAfterRedraw()
++	{
++		SuperPage page = (SuperPage)tester.startPage(SubPage.class);
++		assertEquals(1, page.pageInitializeCount);
++		assertEquals(1, page.outerContainer.getCount());
++		assertEquals(1, page.onBeforeRenderComponent.getCount());
++		assertEquals(1, page.onBeforeRenderContainer.getCount());
++		assertEquals(1, page.innerComponent.getCount());
++		assertEquals(1, page.onInitializeComponent.getCount());
++		assertEquals(1, page.onInitializeContainer.getCount());
++		tester.clickLink("refreshLink");
++		page = (SuperPage)tester.getLastRenderedPage();
++		assertEquals(1, page.pageInitializeCount);
++		assertEquals(1, page.outerContainer.getCount());
++		assertEquals(1, page.onBeforeRenderComponent.getCount());
++		assertEquals(1, page.onBeforeRenderContainer.getCount());
++		assertEquals(1, page.innerComponent.getCount());
++		assertEquals(1, page.onInitializeComponent.getCount());
++		assertEquals(1, page.onInitializeContainer.getCount());
++	}
+ 
+-		public int getCount()
++	public void testCatchBadInitializeMethod()
++	{
++		try
+ 		{
+-			return count;
++			tester.startPage(BadPage.class);
++			fail("should have failed");
+ 		}
+-
+-		public IResourceStream getMarkupResourceStream(MarkupContainer container,
+-			Class<?> containerClass)
++		catch (IllegalStateException e)
+ 		{
+-			return new StringResourceStream(
+-				"<html><body><span wicket:id=\"addedComponent\"></span></body></html>");
++			assertTrue(e.getMessage().contains("onInitialize"));
++			assertTrue(e.getMessage().contains("InvalidComponent"));
+ 		}
+ 	}
+ 
++
+ 	private static class TestComponent extends WebMarkupContainer
+ 	{
+ 		private int count = 0;
+@@ -262,7 +281,7 @@ public class ComponentInitializationTest extends WicketTestCase
+ 
+ 	private static class TestInitListener implements IComponentInitializationListener
+ 	{
+-		private List<Component> components = new ArrayList<Component>();
++		private final List<Component> components = new ArrayList<Component>();
+ 
+ 		public void onInitialize(Component component)
+ 		{
+diff --git a/wicket/src/test/java/org/apache/wicket/markup/html/debug/WicketComponentTreeTestPage_ExpectedResult.html b/wicket/src/test/java/org/apache/wicket/markup/html/debug/WicketComponentTreeTestPage_ExpectedResult.html
+index c13f09e..f5b5d0c 100644
+--- a/wicket/src/test/java/org/apache/wicket/markup/html/debug/WicketComponentTreeTestPage_ExpectedResult.html
++++ b/wicket/src/test/java/org/apache/wicket/markup/html/debug/WicketComponentTreeTestPage_ExpectedResult.html
+@@ -34,13 +34,13 @@
+ 		<tr wicket:id="components">
+ 		  <td valign="top" align="left"><span wicket:id="row">1</span>&nbsp;&nbsp;&nbsp;</td>
+ 		  <td valign="top" align="left"><span wicket:id="path">label1</span>&nbsp;&nbsp;&nbsp;</td>
+-		  <td valign="top" align="left" nowrap><span wicket:id="size">415 bytes</span>&nbsp;&nbsp;&nbsp;</td>
++		  <td valign="top" align="left" nowrap><span wicket:id="size">419 bytes</span>&nbsp;&nbsp;&nbsp;</td>
+ 		  <td valign="top" align="left"><span wicket:id="type">org.apache.wicket.markup.html.basic.Label</span>&nbsp;&nbsp;&nbsp;</td>
+ 		  <td valign="top" align="left"><span wicket:id="model">test1</span>&nbsp;&nbsp;&nbsp;</td>
+ 		</tr><tr wicket:id="components">
+ 		  <td valign="top" align="left"><span wicket:id="row">2</span>&nbsp;&nbsp;&nbsp;</td>
+ 		  <td valign="top" align="left"><span wicket:id="path">label2</span>&nbsp;&nbsp;&nbsp;</td>
+-		  <td valign="top" align="left" nowrap><span wicket:id="size">416 bytes</span>&nbsp;&nbsp;&nbsp;</td>
++		  <td valign="top" align="left" nowrap><span wicket:id="size">420 bytes</span>&nbsp;&nbsp;&nbsp;</td>
+ 		  <td valign="top" align="left"><span wicket:id="type">org.apache.wicket.markup.html.basic.Label</span>&nbsp;&nbsp;&nbsp;</td>
+ 		  <td valign="top" align="left"><span wicket:id="model">test22</span>&nbsp;&nbsp;&nbsp;</td>
+ 		</tr>
+-- 
+1.7.1
+
