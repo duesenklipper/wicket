@@ -18,6 +18,8 @@ package org.apache.wicket.util.tester;
 
 import junit.framework.TestCase;
 
+import org.apache.wicket.ajax.AjaxRequestTarget;
+import org.apache.wicket.ajax.markup.html.form.AjaxSubmitLink;
 import org.apache.wicket.markup.html.WebPage;
 import org.apache.wicket.markup.html.form.Form;
 import org.apache.wicket.markup.html.form.SubmitLink;
@@ -49,6 +51,30 @@ public class FormTesterSubmitLinkTest extends TestCase
 			.getDefaultModelObjectAsString());
 	}
 
+	public void testAjaxSubmitLink() throws Exception
+	{
+		tester.startPage(TestPage.class);
+
+		FormTester form = tester.newFormTester("form2");
+		form.setValue("text", "some test text");
+		tester.clickLink("form2:submit", true);
+		assertEquals("some test text", tester.getComponentFromLastRenderedPage("form2:text")
+			.getDefaultModelObjectAsString());
+	}
+
+	public void testAjaxSubmitLinkMustNotLosePreviousInput() throws Exception
+	{
+		tester.startPage(TestPage.class);
+
+		FormTester form = tester.newFormTester("form2");
+		form.setValue("text", "some test text");
+		tester.clickLink("form2:submit", true);
+		// click again for no-change resubmit. should still contain the same values now.
+		tester.clickLink("form2:submit", true);
+		assertEquals("some test text", tester.getComponentFromLastRenderedPage("form2:text")
+			.getDefaultModelObjectAsString());
+	}
+
 	public void testRegularSubmit() throws Exception
 	{
 		tester.startPage(TestPage.class);
@@ -75,6 +101,16 @@ public class FormTesterSubmitLinkTest extends TestCase
 			add(form);
 			form.add(new TextField<String>("text", Model.of(""), String.class));
 			form.add(new SubmitLink("submit"));
+			Form form2 = new Form("form2");
+			add(form2);
+			form2.add(new TextField<String>("text", Model.of(""), String.class));
+			form2.add(new AjaxSubmitLink("submit")
+			{
+				@Override
+				protected void onSubmit(AjaxRequestTarget target, Form<?> form)
+				{
+				}
+			});
 		}
 	}
 

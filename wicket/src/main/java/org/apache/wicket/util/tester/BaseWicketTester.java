@@ -1446,9 +1446,11 @@ public class BaseWicketTester extends MockWebApplication
 
 						// Set request parameter with the field value, but do not modify an existing
 						// request parameter explicitly set using FormTester.setValue()
-						if (getServletRequest().getParameterMap().get(name) == null)
+						if (!getServletRequest().getParameterMap().containsKey(name) &&
+							!getParametersForNextRequest().containsKey(name))
 						{
 							getServletRequest().setParameter(name, value);
+							getParametersForNextRequest().put(name, new String[] { value });
 						}
 					}
 				}
