@@ -16,6 +16,9 @@
  */
 package org.apache.wicket.util.string;
 
+import java.util.Collection;
+
+import org.apache.wicket.Component;
 import org.apache.wicket.Response;
 
 
@@ -193,6 +196,31 @@ public class JavascriptUtils
 		response.write(SCRIPT_CONTENT_SUFFIX);
 		response.println("</script>\n");
 
+	}
+
+	/**
+	 * Builds a JavaScript array literal containing the markup IDs of the given components. Example:
+	 * "['foo', 'bar', 'baz']".
+	 * 
+	 * @param components
+	 *            The components whose IDs we need
+	 * @return a properly formatted JS array literal
+	 */
+	public static String buildMarkupIdJSArrayLiteral(Collection<? extends Component> components)
+	{
+		StringBuilder buf = new StringBuilder();
+		buf.append("[");
+		if (!components.isEmpty())
+		{
+			for (Component box : components)
+			{
+				box.setOutputMarkupId(true);
+				buf.append("'").append(box.getMarkupId()).append("', ");
+			}
+			buf.delete(buf.length() - 2, buf.length());
+		}
+		buf.append("]");
+		return buf.toString();
 	}
 
 	/**

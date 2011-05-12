@@ -1,0 +1,1 @@
+CheckBoxSelector.attachUpdateHandlers(${checkBoxIdArrayLiteral}, '${selectorId}');
