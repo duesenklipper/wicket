@@ -15,22 +15,27 @@
  * limitations under the License.
  */
 // introduce a namespace, just to be nice
-if (typeof (Wicket.CheckboxSelector.Checkboxes) == "undefined") {
-	Wicket.CheckboxSelector.Checkboxes = {};
+if (typeof (Wicket.CheckboxSelector.Group) == "undefined") {
+	Wicket.CheckboxSelector.Group = {};
 	/**
-	 * Returns a closure that finds all checkboxes with the given IDs.
+	 * Returns a closure that finds all checkboxes associated with the given
+	 * CheckGroup.
 	 * 
-	 * @param parentChoiceId
-	 *            An array containing the markup IDs of all checkboxes this
-	 *            selector should control.
+	 * @param formId
+	 *            The markup ID of the containing form (needed because the
+	 *            selector might be outside the form)
+	 * @param groupName
+	 *            The input name of the CheckGroup
 	 */
-	Wicket.CheckboxSelector.Checkboxes.findCheckboxesFunction = function(
-			checkBoxIDs) {
+	Wicket.CheckboxSelector.Group.findCheckboxesFunction = function(formId,
+			groupName) {
 		return function() {
 			var result = new Array();
-			for (i in checkBoxIDs) {
-				var checkBox = wicketGet(checkBoxIDs[i]);
-				result.push(checkBox)
+			var parentForm = wicketGet(formId);
+			var parentGroup = parentForm[groupName];
+			for ( var i = 0; i < parentGroup.length; i++) {
+				var checkbox = parentGroup[i];
+				result.push(checkbox);
 			}
 			return result;
 		}

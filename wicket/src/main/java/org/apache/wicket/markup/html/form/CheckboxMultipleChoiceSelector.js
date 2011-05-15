@@ -15,22 +15,28 @@
  * limitations under the License.
  */
 // introduce a namespace, just to be nice
-if (typeof (Wicket.CheckboxSelector.Checkboxes) == "undefined") {
-	Wicket.CheckboxSelector.Checkboxes = {};
+if (typeof (Wicket.CheckboxSelector.Choice) == "undefined") {
+	Wicket.CheckboxSelector.Choice = {};
+
 	/**
-	 * Returns a closure that finds all checkboxes with the given IDs.
+	 * Returns a closure that finds all checkboxes associated with the given
+	 * CheckboxMultipleChoice.
 	 * 
 	 * @param parentChoiceId
-	 *            An array containing the markup IDs of all checkboxes this
-	 *            selector should control.
+	 *            The markup ID of the CheckboxMultipleChoise
 	 */
-	Wicket.CheckboxSelector.Checkboxes.findCheckboxesFunction = function(
-			checkBoxIDs) {
+	// adapted from AjaxFormChoiceComponentUpdatingBehavior
+	Wicket.CheckboxSelector.Choice.findCheckboxesFunction = function(
+			parentChoiceId) {
 		return function() {
 			var result = new Array();
-			for (i in checkBoxIDs) {
-				var checkBox = wicketGet(checkBoxIDs[i]);
-				result.push(checkBox)
+			var inputNodes = wicketGet(parentChoiceId).getElementsByTagName(
+					'input');
+			for ( var i = 0; i < inputNodes.length; i++) {
+				var inputNode = inputNodes[i];
+				if (inputNode.id.indexOf(parentChoiceId + '-') >= 0) {
+					result.push(inputNode);
+				}
 			}
 			return result;
 		}

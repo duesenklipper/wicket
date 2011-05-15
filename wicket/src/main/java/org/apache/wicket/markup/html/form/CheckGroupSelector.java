@@ -16,9 +16,9 @@
  */
 package org.apache.wicket.markup.html.form;
 
+import org.apache.wicket.ResourceReference;
 import org.apache.wicket.WicketRuntimeException;
-import org.apache.wicket.markup.ComponentTag;
-import org.apache.wicket.markup.html.WebMarkupContainer;
+import org.apache.wicket.markup.html.IHeaderResponse;
 
 /**
  * Selects and deselects all Check components under the same CheckGroup as itself. Selection
@@ -31,73 +31,118 @@ import org.apache.wicket.markup.html.WebMarkupContainer;
  * @see org.apache.wicket.markup.html.form.Check
  * 
  * @author Igor Vaynberg
- * 
+ * @author Carl-Eric Menzel
  */
-public class CheckGroupSelector extends LabeledWebMarkupContainer
+public class CheckGroupSelector extends AbstractCheckSelector
 {
 	/** */
 	private static final long serialVersionUID = 1L;
+	private final static ResourceReference JS = new ResourceReference(CheckGroupSelector.class,
+		"CheckGroupSelector.js");
 
-	private final CheckGroup<?> group;
+	private CheckGroup<?> group;
 
 	/**
-	 * @see WebMarkupContainer#WebMarkupContainer(String)
+	 * A Selector that will look for a {@link CheckGroup} in its parent hierarchy.
+	 * 
+	 * @param id
+	 *            component id
 	 */
 	public CheckGroupSelector(String id)
 	{
 		this(id, null);
 	}
 
+	@Override
+	public void renderHead(IHeaderResponse response)
+	{
+		super.renderHead(response);
+		response.renderJavascriptReference(JS);
+	}
+
 	/**
+	 * A Selector that will work with the given group.
+	 * 
 	 * @param id
+	 *            component id
 	 * @param group
-	 * @see WebMarkupContainer#WebMarkupContainer(String)
+	 *            group to work with
 	 */
 	public CheckGroupSelector(String id, CheckGroup<?> group)
 	{
 		super(id);
 		this.group = group;
+		setOutputMarkupId(true);
 	}
 
 	/**
+	 * @deprecated Overridden to disable automatic update, because previous versions of
+	 *             CheckGroupSelector did not have the automatic update feature. Override again to
+	 *             return true if you want to have automatic updates.
 	 * 
-	 * @see org.apache.wicket.Component#onComponentTag(org.apache.wicket.markup.ComponentTag)
+	 *             TODO: Remove this compatibility override in 1.5 or 1.6?
+	 * @see org.apache.wicket.markup.html.form.AbstractCheckSelector#wantAutomaticUpdate()
 	 */
 	@Override
-	protected void onComponentTag(ComponentTag tag)
+	@Deprecated
+	protected boolean wantAutomaticUpdate()
 	{
-		// must be attached to <input type="checkbox" .../> tag
-		checkComponentTag(tag, "input");
-		checkComponentTagAttribute(tag, "type", "checkbox");
+		return false;
+	}
 
+	private CheckGroup<?> getGroup()
+	{
 		CheckGroup<?> group = this.group;
 		if (group == null)
 		{
 			group = findParent(CheckGroup.class);
-			if (group == null)
+			this.group = group;
+		}
+		return group;
+	}
+
+	@Override
+	protected void onInitialize()
+	{
+		// try and make sure the form we need outputs its markup id.
+		super.onInitialize();
+		CheckGroup<?> group = getGroup();
+		if (group != null)
+		{
+			Form<?> form = group.getForm();
+			if (form != null)
 			{
-				throw new WicketRuntimeException(
-					"CheckGroupSelector component [" +
-						getPath() +
-						"] cannot find its parent CheckGroup. All CheckGroupSelector components must be a child of or below in the hierarchy of a CheckGroup component.");
+				form.setOutputMarkupId(true);
 			}
 		}
+	}
 
-		final boolean groupEnabled = group.isEnabledInHierarchy() && group.isEnableAllowed();
-		final boolean selfEnabled = isEnabledInHierarchy() && isEnableAllowed();
-		if (groupEnabled && selfEnabled)
+	@Override
+	public boolean isEnabled()
+	{
+		CheckGroup<?> group = getGroup();
+		if (group == null)
 		{
-			tag.put(
-				"onclick",
-				"var cb=this.form['" +
-					group.getInputName() +
-					"']; if (cb!=null) { if (!isNaN(cb.length)) { for(var i=0;i<cb.length;i++) { if (cb[i].disabled) continue; if (cb[i].checked != this.checked) {cb[i].click();} } } else { if (!cb.disabled&&cb.checked != this.checked) {cb.click();} } }");
+			return true;
 		}
 		else
 		{
-			tag.put("disabled", "disabled");
+			return group.isEnableAllowed() && group.isEnabledInHierarchy();
 		}
+	}
 
-		super.onComponentTag(tag);
+	@Override
+	protected CharSequence getFindCheckboxesFunction()
+	{
+		CheckGroup<?> group = getGroup();
+		if (group == null)
+		{
+			throw new WicketRuntimeException(
+				"CheckGroupSelector component [" +
+					getPath() +
+					"] cannot find its parent CheckGroup. All CheckGroupSelector components must be a child of or below in the hierarchy of a CheckGroup component.");
+		}
+		return "Wicket.CheckboxSelector.Group.findCheckboxesFunction('" +
+			group.getForm().getMarkupId() + "','" + group.getInputName() + "')";
 	}
 }
