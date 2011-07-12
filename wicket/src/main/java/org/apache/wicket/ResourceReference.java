@@ -74,10 +74,11 @@ public class ResourceReference implements IClusterable
 	/** Whether or not this resource reference is stateless */
 	private boolean stateless;
 
-	/** Whether to use the locale and style set in the session, dynamically */
+	/** Whether to use the locale set in the session, dynamically */
 	private boolean useSessionLocale = false;
 
-	private boolean useSessionStyle;
+	/** Whether to use the style set in the session, dynamically */
+	private boolean useSessionStyle = false;
 
 	/**
 	 * Constructs a ResourceReference with the given scope and name. The scope is used as a
@@ -143,6 +144,30 @@ public class ResourceReference implements IClusterable
 		this(scope, name);
 		this.useSessionLocale = useSessionLocale;
 		this.useSessionStyle = useSessionStyle;
+	}
+
+	/**
+	 * Constructs a ResourceReference with the given scope and name that optionally follows the
+	 * locale and style settings in the {@link Session}. This is a convenience constructor that
+	 * calls {@link #ResourceReference(Class, String, boolean, boolean)} supplying the value of
+	 * useSessionLocaleAndStyle for both flags.
+	 * 
+	 * @see Session#getStyle()
+	 * @see Session#getLocale()
+	 * @param scope
+	 *            The scope of the name
+	 * @param name
+	 *            The name of the resource
+	 * @param useSessionLocaleAndStyle
+	 *            Whether to follow the locale and style settings in the session. If
+	 *            <code>true</code>, the locale and style will be taken dynamically from the
+	 *            session. If this is <code>false</code>, this ResourceReference will behave exactly
+	 *            as one constructed with {@link #ResourceReference(Class, String)}.
+	 */
+	public ResourceReference(final Class<?> scope, final String name,
+		boolean useSessionLocaleAndStyle)
+	{
+		this(scope, name, useSessionLocaleAndStyle, useSessionLocaleAndStyle);
 	}
 
 	/**
