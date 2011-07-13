@@ -22,7 +22,7 @@ import org.apache.wicket.WicketRuntimeException;
 import org.apache.wicket.markup.ComponentTag;
 import org.apache.wicket.markup.MarkupStream;
 import org.apache.wicket.markup.RawMarkup;
-import org.apache.wicket.markup.html.WebMarkupContainer;
+import org.apache.wicket.markup.html.TransparentWebMarkupContainer;
 import org.apache.wicket.markup.parser.XmlPullParser;
 import org.apache.wicket.markup.parser.XmlTag;
 import org.apache.wicket.markup.resolver.IComponentResolver;
@@ -186,7 +186,7 @@ public class AutoLabelResolver implements IComponentResolver
 	 * 
 	 * @author igor
 	 */
-	protected static class AutoLabel extends WebMarkupContainer
+	protected static class AutoLabel extends TransparentWebMarkupContainer
 	{
 		private static final long serialVersionUID = 1L;
 
@@ -218,16 +218,11 @@ public class AutoLabelResolver implements IComponentResolver
 			}
 		}
 
+
 		@Override
 		public void onComponentTagBody(MarkupStream markupStream, ComponentTag openTag)
 		{
-			if (!(markupStream.get() instanceof RawMarkup))
-			{
-				// no raw markup found inside the label, do not modify the contents
-				return;
-			}
-
-			// read all raw markup in the body and find the range of the label text inside it. the
+			// read all markup in the body and find the range of the label text inside it. the
 			// range is specified as the body of the <span class='text'></span> tag.
 
 			AppendingStringBuffer markup = readBodyMarkup(markupStream);
@@ -344,7 +339,7 @@ public class AutoLabelResolver implements IComponentResolver
 			AppendingStringBuffer markup = new AppendingStringBuffer();
 			do
 			{
-				markup.append(((RawMarkup)markupStream.get()).toString());
+				markup.append((markupStream.get()).toString());
 				markupStream.next();
 			}
 			while ((markupStream.get() instanceof RawMarkup));
