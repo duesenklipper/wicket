@@ -25,7 +25,7 @@ import org.apache.wicket.util.string.Strings;
 
 /**
  * Markup filter that identifies tags with the {@code wicket:for} attribute. See
- * {@link AutoLabelResolver} for details.
+ * {@link AutoLabelForInputTagResolver} for details.
  * 
  * @author igor
  */
@@ -63,6 +63,7 @@ public class AutoLabelTagHandler extends AbstractMarkupFilter
 
 		tag.setId(getClass().getName());
 		tag.setModified(true);
+		tag.setAutoComponentTag(true);
 		return tag;
 	}
 
