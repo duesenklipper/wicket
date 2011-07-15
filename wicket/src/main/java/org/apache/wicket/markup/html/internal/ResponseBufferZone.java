@@ -26,7 +26,7 @@ import org.apache.wicket.response.StringResponse;
  * 
  * @author igor.vaynberg
  */
-public abstract class ResponseBufferZone
+abstract class ResponseBufferZone
 {
 	private final RequestCycle cycle;
 	private final MarkupStream stream;
