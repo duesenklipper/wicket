@@ -16,8 +16,7 @@
  */
 package org.apache.wicket.util.tester;
 
-import static junit.framework.Assert.assertNotNull;
-import static junit.framework.Assert.fail;
+import static junit.framework.Assert.*;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -352,7 +351,7 @@ public class BaseWicketTester
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	private void setupNextRequestCycle()
 	{
@@ -360,8 +359,8 @@ public class BaseWicketTester
 		request.setURL(request.getContextPath() + request.getServletPath() + "/");
 
 		// assign protocol://host:port to next request unless the last request was ajax
-		final boolean assignBaseLocation =
-			lastRequest != null && lastRequest.getHeader("Wicket-Ajax") == null;
+		final boolean assignBaseLocation = lastRequest != null &&
+			lastRequest.getHeader("Wicket-Ajax") == null;
 
 		// resume request processing with scheme://host:port from last request
 		if (assignBaseLocation)
@@ -371,7 +370,7 @@ public class BaseWicketTester
 			request.setServerName(lastRequest.getServerName());
 			request.setServerPort(lastRequest.getServerPort());
 		}
-		
+
 		response = new MockHttpServletResponse(request);
 
 		ServletWebRequest servletWebRequest = newServletWebRequest();
@@ -404,7 +403,7 @@ public class BaseWicketTester
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	private void newSession()
 	{
@@ -615,7 +614,7 @@ public class BaseWicketTester
 					request.setUrl(newUrl);
 
 					final String protocol = newUrl.getProtocol();
-					
+
 					if (protocol != null)
 					{
 						request.setScheme(protocol);
@@ -636,7 +635,7 @@ public class BaseWicketTester
 				{
 					// append redirect URL to current URL (what browser would do)
 					Url mergedURL = new Url(lastRequest.getUrl().getSegments(),
-					    newUrl.getQueryParameters());
+						newUrl.getQueryParameters());
 					mergedURL.concatSegments(newUrl.getSegments());
 
 					request.setUrl(mergedURL);
@@ -680,7 +679,7 @@ public class BaseWicketTester
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	private void recordRequestResponse()
 	{
@@ -1593,6 +1592,19 @@ public class BaseWicketTester
 	}
 
 	/**
+	 * assert the content of last rendered page contains(matches) regex pattern.
+	 * 
+	 * @param pattern
+	 *            reqex pattern to match
+	 * @return a <code>Result</code>
+	 */
+	public Result ifContainsNot(String pattern)
+	{
+		return isFalse("pattern '" + pattern + "' found",
+			getLastResponseAsString().matches("(?s).*" + pattern + ".*"));
+	}
+
+	/**
 	 * assert the model of {@link ListView} use expectedList
 	 * 
 	 * @param path
@@ -2437,7 +2449,7 @@ public class BaseWicketTester
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	private class LastPageRecordingPageRendererProvider implements IPageRendererProvider
 	{
@@ -2456,7 +2468,7 @@ public class BaseWicketTester
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	private class TestExceptionMapper implements IExceptionMapper
 	{
@@ -2488,7 +2500,7 @@ public class BaseWicketTester
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	private class TestRequestCycleProvider implements IRequestCycleProvider
 	{
@@ -2509,7 +2521,7 @@ public class BaseWicketTester
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	private class TestRequestMapper implements IRequestMapper
 	{
@@ -2546,11 +2558,11 @@ public class BaseWicketTester
 	}
 
 	/**
-	 * 
+	 *
 	 */
 
 	/**
-	 * 
+	 *
 	 */
 	private static class TestPageManagerProvider implements IPageManagerProvider
 	{
@@ -2561,7 +2573,7 @@ public class BaseWicketTester
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	private class TestFilterConfig implements FilterConfig
 	{
@@ -2594,7 +2606,7 @@ public class BaseWicketTester
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	private static class WicketTesterServletWebResponse extends ServletWebResponse
 		implements
