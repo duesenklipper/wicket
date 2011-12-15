@@ -240,7 +240,7 @@ public class Form<T> extends WebMarkupContainer implements IFormSubmitListener, 
 
 
 	/**
-	 * 
+	 *
 	 */
 	class FormDispatchRequest extends Request
 	{
@@ -909,14 +909,9 @@ public class Form<T> extends WebMarkupContainer implements IFormSubmitListener, 
 				}
 				else
 				{
-					// this is the root form
-					Form<?> formToProcess = this;
-
-					// find out whether it was a nested form that was submitted
-					if (submittingComponent != null)
-					{
-						formToProcess = submittingComponent.getForm();
-					}
+					// the submit request might be for one of the nested forms, so let's
+					// find the right one:
+					final Form<?> formToProcess = findFormToProcess(submittingComponent);
 
 					// process the form for this request
 					formToProcess.process(submittingComponent);
@@ -928,6 +923,70 @@ public class Form<T> extends WebMarkupContainer implements IFormSubmitListener, 
 		else if (hasError())
 		{
 			callOnError();
+		}
+	}
+
+	/**
+	 * This method finds the correct form that should be processed based on the submitting component
+	 * (if there is one) and correctly handles nested forms by also looking at
+	 * {@link #wantSubmitOnNestedFormSubmit()} throughout the form hierarchy. The form that needs to
+	 * be processed is:
+	 * <ul>
+	 * <li>if there is no submitting component (i.e. a "default submit"): this form.</li>
+	 * <li>if only one form exists (this): this form.</li>
+	 * <li>if nested forms exist:
+	 * <ul>
+	 * <li>if the submitting component points at the root form: the root form</li>
+	 * <li>if the submitting component points at a nested form:
+	 * <ul>
+	 * <li>starting at that nested form, the outermost form that returns true for
+	 * {@link #wantSubmitOnNestedFormSubmit()}</li>
+	 * <li>if no outer form returns true for that, the nested form is returned.</li>
+	 * </ul>
+	 * </li>
+	 * </ul>
+	 * </li>
+	 * </ul>
+	 * 
+	 * @param submittingComponent
+	 *            The submitting component, if any. May be null.
+	 * @return The form that needs to be processed.
+	 */
+	private Form<?> findFormToProcess(IFormSubmittingComponent submittingComponent)
+	{
+		if (submittingComponent == null)
+		{
+			// no submitting component => default form submit => so *this* is the
+			// form to process
+			return this;
+		}
+		else
+		{
+			// some button submitted this request, this is the form it belongs to:
+			final Form<?> targetedForm = submittingComponent.getForm();
+			final Form<?> rootForm = getRootForm();
+			if (targetedForm == rootForm)
+			{
+				// the submitting component points at the root form => so let's just go with
+				// root, everything else will be submitted with it anyway.
+				return rootForm;
+			}
+			else
+			{
+				// a different form was targeted. let's find the outermost form that wants to be
+				// submitted.
+				Form<?> formThatWantsToBeSubmitted = targetedForm;
+				Form<?> current = targetedForm.findParent(Form.class);
+				while (current != null)
+				{
+					if (current.wantSubmitOnNestedFormSubmit())
+					{
+						formThatWantsToBeSubmitted = current;
+					}
+					current = current.findParent(Form.class);
+				}
+				return formThatWantsToBeSubmitted;
+			}
 		}
 	}
 
@@ -1583,11 +1642,9 @@ public class Form<T> extends WebMarkupContainer implements IFormSubmitListener, 
 	{
 		// when the given submitting component is not null, it means that it was the
 		// submitting component
-		Form<?> formToProcess = this;
+		final Form<?> formToProcess = findFormToProcess(submittingComponent);
 		if (submittingComponent != null)
 		{
-			// use the form which the submittingComponent has submitted for further processing
-			formToProcess = submittingComponent.getForm();
 			submittingComponent.onSubmit();
 		}
 
@@ -2494,5 +2551,17 @@ public class Form<T> extends WebMarkupContainer implements IFormSubmitListener, 
 			inputName.prepend(Component.PATH_SEPARATOR);
 		}
 		return inputName.toString();
+	}
+
+	/**
+	 * Whether this form wants to be submitted too if a nested form is submitted. By default, this
+	 * is false, so when a nested form is submitted, this form will <em>not</em> be submitted. If
+	 * this method is overridden to return true, this form <em>will</em> be submitted.
+	 * 
+	 * @return Whether this form wants to be submitted too if a nested form is submitted.
+	 */
+	public boolean wantSubmitOnNestedFormSubmit()
+	{
+		return false;
 	}
 }
