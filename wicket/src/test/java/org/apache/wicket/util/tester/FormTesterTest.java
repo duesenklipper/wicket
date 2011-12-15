@@ -156,8 +156,9 @@ public class FormTesterTest extends WicketTestCase
 		FileUpload fileUpload = page.getFileUpload();
 		assertNotNull(fileUpload);
 
-		assertTrue("uploaded content does not have the right size, expected 428, got " +
-			fileUpload.getBytes().length, fileUpload.getBytes().length == 428);
+		assertTrue(
+			"uploaded content does not have the right size, expected 428, got " +
+				fileUpload.getBytes().length, fileUpload.getBytes().length == 428);
 		assertEquals("bg.jpg", fileUpload.getClientFileName());
 		assertEquals("image/jpeg", fileUpload.getContentType());
 	}
@@ -226,5 +227,38 @@ public class FormTesterTest extends WicketTestCase
 		assertFalse(check.isEnabledInHierarchy());
 		FormTester formTester = tester.newFormTester("form");
 		formTester.submit();
+	}
+
+	public void testNestedFormHandlingOnInnerSubmit() throws Exception
+	{
+		NestedFormPage page = (NestedFormPage)tester.startPage(NestedFormPage.class);
+		FormTester form = tester.newFormTester("outer:inner");
+		form.submit("submit");
+		assertFalse("should not directly submit inner form - browsers submit the outer form!",
+			page.iface.contains("inner"));
+		assertFalse("outer form should not be processed", page.outerSubmitted);
+		assertTrue("inner form should be processed", page.innerSubmitted);
+	}
+
+	public void testNestedFormHandlingOnInnerSubmitWithOuterForm() throws Exception
+	{
+		NestedFormPage page = (NestedFormPage)tester.startPage(NestedFormPage.class);
+		FormTester form = tester.newFormTester("outer");
+		form.submit("inner:submit");
+		assertFalse("should not directly submit inner form - browsers submit the outer form!",
+			page.iface.contains("inner"));
+		assertFalse("outer form should not be processed", page.outerSubmitted);
+		assertTrue("inner form should be processed", page.innerSubmitted);
+	}
+
+	public void testNestedFormHandlingOnOuterSubmit() throws Exception
+	{
+		NestedFormPage page = (NestedFormPage)tester.startPage(NestedFormPage.class);
+		FormTester form = tester.newFormTester("outer");
+		form.submit();
+		assertFalse("should not directly submit inner form - browsers submit the outer form!",
+			page.iface.contains("inner"));
+		assertTrue("outer form should be processed", page.outerSubmitted);
+		assertTrue("inner form should be processed", page.innerSubmitted);
 	}
 }
