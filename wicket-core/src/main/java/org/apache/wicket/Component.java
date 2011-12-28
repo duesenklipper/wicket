@@ -59,6 +59,7 @@ import org.apache.wicket.request.Response;
 import org.apache.wicket.request.component.IRequestableComponent;
 import org.apache.wicket.request.component.IRequestablePage;
 import org.apache.wicket.request.cycle.RequestCycle;
+import org.apache.wicket.request.flow.ResetResponseException;
 import org.apache.wicket.request.handler.BookmarkableListenerInterfaceRequestHandler;
 import org.apache.wicket.request.handler.ListenerInterfaceRequestHandler;
 import org.apache.wicket.request.handler.PageAndComponentProvider;
@@ -963,7 +964,7 @@ public abstract class Component
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	private final void internalBeforeRender()
 	{
@@ -2377,6 +2378,7 @@ public abstract class Component
 	{
 		// Call each behaviors onException() to allow the
 		// behavior to clean up
+		RuntimeException toRethrow = ex;
 		for (Behavior behavior : getBehaviors())
 		{
 			if (isBehaviorAccepted(behavior))
@@ -2384,6 +2386,10 @@ public abstract class Component
 				try
 				{
 					behavior.onException(this, ex);
+				}
+				catch (ResetResponseException rre)
+				{
+					toRethrow = rre;
 				}
 				catch (Throwable ex2)
 				{
@@ -2393,7 +2399,7 @@ public abstract class Component
 		}
 
 		// Re-throw the exception
-		throw ex;
+		throw toRethrow;
 	}
 
 	/**
@@ -4144,7 +4150,7 @@ public abstract class Component
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	protected void onAfterRenderChildren()
 	{
