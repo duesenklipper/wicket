@@ -1049,7 +1049,7 @@ public abstract class Component implements IClusterable, IConverterLocator
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	private final void internalBeforeRender()
 	{
@@ -2533,6 +2533,7 @@ public abstract class Component implements IClusterable, IConverterLocator
 			}
 			catch (RuntimeException ex)
 			{
+				RuntimeException toRethrow = ex;
 				// Call each behaviors onException() to allow the
 				// behavior to clean up
 				for (IBehavior behavior : getBehaviors())
@@ -2543,6 +2544,10 @@ public abstract class Component implements IClusterable, IConverterLocator
 						{
 							behavior.exception(this, ex);
 						}
+						catch (AbstractRestartResponseException restartEx)
+						{
+							toRethrow = restartEx;
+						}
 						catch (Throwable ex2)
 						{
 							log.error("Error while cleaning up after exception", ex2);
@@ -2551,7 +2556,7 @@ public abstract class Component implements IClusterable, IConverterLocator
 				}
 
 				// Re-throw the exception
-				throw ex;
+				throw toRethrow;
 			}
 
 			if (log.isDebugEnabled())
@@ -4552,7 +4557,7 @@ public abstract class Component implements IClusterable, IConverterLocator
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	void onAfterRenderChildren()
 	{
