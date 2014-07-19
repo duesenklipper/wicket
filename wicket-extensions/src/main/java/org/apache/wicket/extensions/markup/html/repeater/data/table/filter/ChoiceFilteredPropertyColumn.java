@@ -16,12 +16,12 @@
  */
 package org.apache.wicket.extensions.markup.html.repeater.data.table.filter;
 
-import java.util.List;
-
 import org.apache.wicket.Component;
 import org.apache.wicket.markup.html.form.IChoiceRenderer;
 import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.PropertyModel;
+
+import java.util.List;
 
 /**
  * A filtered property column that creates a textfield filter component. The default model of the
@@ -36,11 +36,12 @@ import org.apache.wicket.model.PropertyModel;
  *            The column model object type
  * @param <S>
  *            the type of the sort property
+ * @param <C> the type of the choices
  */
-public class ChoiceFilteredPropertyColumn<T, Y, S> extends FilteredPropertyColumn<T, S>
+public class ChoiceFilteredPropertyColumn<T, Y, S, C extends Y> extends FilteredPropertyColumn<T, S>
 {
 	private static final long serialVersionUID = 1L;
-	private final IModel<List<? extends Y>> filterChoices;
+	private final IModel<List<C>> filterChoices;
 
 	/**
 	 * @param displayModel
@@ -51,7 +52,7 @@ public class ChoiceFilteredPropertyColumn<T, Y, S> extends FilteredPropertyColum
 	 */
 	public ChoiceFilteredPropertyColumn(final IModel<String> displayModel,
 		final S sortProperty, final String propertyExpression,
-		final IModel<List<? extends Y>> filterChoices)
+		final IModel<List<C>> filterChoices)
 	{
 		super(displayModel, sortProperty, propertyExpression);
 		this.filterChoices = filterChoices;
@@ -64,7 +65,7 @@ public class ChoiceFilteredPropertyColumn<T, Y, S> extends FilteredPropertyColum
 	 *            collection of choices used in the choice filter
 	 */
 	public ChoiceFilteredPropertyColumn(final IModel<String> displayModel,
-		final String propertyExpression, final IModel<List<? extends Y>> filterChoices)
+		final String propertyExpression, final IModel<List<C>> filterChoices)
 	{
 		super(displayModel, propertyExpression);
 		this.filterChoices = filterChoices;
@@ -138,7 +139,7 @@ public class ChoiceFilteredPropertyColumn<T, Y, S> extends FilteredPropertyColum
 	/**
 	 * @return filter choices model
 	 */
-	protected final IModel<List<? extends Y>> getFilterChoices()
+	protected final IModel<List<C>> getFilterChoices()
 	{
 		return filterChoices;
 	}

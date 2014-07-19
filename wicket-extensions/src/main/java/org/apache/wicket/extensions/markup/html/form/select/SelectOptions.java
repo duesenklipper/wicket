@@ -24,7 +24,7 @@ import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.parser.XmlTag.TagType;
 import org.apache.wicket.markup.repeater.RepeatingView;
 import org.apache.wicket.model.IModel;
-import org.apache.wicket.model.util.WildcardCollectionModel;
+import org.apache.wicket.model.util.SerializableCollectionModel;
 
 
 /**
@@ -74,7 +74,7 @@ public class SelectOptions<T> extends RepeatingView
 	public SelectOptions(final String id, final Collection<? extends T> elements,
 		final IOptionRenderer<T> renderer)
 	{
-		this(id, new WildcardCollectionModel<>(elements), renderer);
+		this(id, new SerializableCollectionModel<>(elements), renderer);
 	}
 
 	/**

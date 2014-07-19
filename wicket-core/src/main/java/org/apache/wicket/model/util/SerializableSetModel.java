@@ -27,14 +27,14 @@ import java.util.Set;
  * @param <T>
  *            type of object inside set
  */
-public class WildcardSetModel<T> extends GenericBaseModel<Set<? extends T>>
+public class SerializableSetModel<T> extends GenericBaseModel<Set<T>>
 {
 	private static final long serialVersionUID = 1L;
 
 	/**
 	 * Creates empty model
 	 */
-	public WildcardSetModel()
+	public SerializableSetModel()
 	{
 	}
 
@@ -43,14 +43,14 @@ public class WildcardSetModel<T> extends GenericBaseModel<Set<? extends T>>
 	 * 
 	 * @param set
 	 */
-	public WildcardSetModel(Set<? extends T> set)
+	public SerializableSetModel(Set<T> set)
 	{
 		setObject(set);
 	}
 
 	/** {@inheritDoc} */
 	@Override
-	protected Set<? extends T> createSerializableVersionOf(Set<? extends T> object)
+	protected Set<T> createSerializableVersionOf(Set<T> object)
 	{
 		return new HashSet<T>(object);
 	}

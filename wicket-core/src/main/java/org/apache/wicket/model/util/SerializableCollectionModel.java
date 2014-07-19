@@ -17,46 +17,41 @@
 package org.apache.wicket.model.util;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 
 
 /**
- * Based on <code>Model</code> but for lists of serializable objects.
+ * Based on <code>Model</code> but for any collections of serializable objects.
  * 
  * @author Timo Rantalaiho
  * @param <T>
- *            type of object inside list
+ *            type of object inside collection
  */
-public class WildcardListModel<T> extends GenericBaseModel<List<? extends T>>
+public class SerializableCollectionModel<T> extends GenericBaseModel<Collection<T>>
 {
 	private static final long serialVersionUID = 1L;
 
 	/**
 	 * Creates empty model
 	 */
-	public WildcardListModel()
+	public SerializableCollectionModel()
 	{
 	}
 
 	/**
-	 * Creates model that will contain <code>list</code>
+	 * Creates model that will contain <code>collection</code>
 	 * 
-	 * @param list
-	 * 
+	 * @param collection
 	 */
-	public WildcardListModel(List<? extends T> list)
+	public SerializableCollectionModel(Collection<T> collection)
 	{
-		setObject(list);
+		setObject(collection);
 	}
 
 	/** {@inheritDoc} */
 	@Override
-	protected List<? extends T> createSerializableVersionOf(List<? extends T> object)
+	protected Collection<T> createSerializableVersionOf(Collection<T> object)
 	{
-		if (object == null)
-		{
-			return null;
-		}
 		return new ArrayList<T>(object);
 	}
 }

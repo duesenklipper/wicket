@@ -16,14 +16,14 @@
  */
 package org.apache.wicket.extensions.markup.html.repeater.data.table.filter;
 
-import java.util.List;
-
 import org.apache.wicket.AttributeModifier;
 import org.apache.wicket.markup.html.form.ChoiceRenderer;
 import org.apache.wicket.markup.html.form.DropDownChoice;
 import org.apache.wicket.markup.html.form.IChoiceRenderer;
 import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.Model;
+
+import java.util.List;
 
 
 /**
@@ -48,8 +48,8 @@ public class ChoiceFilter<T> extends AbstractFilter
 	 * @param choices
 	 * @param autoSubmit
 	 */
-	public ChoiceFilter(final String id, final IModel<T> model, final FilterForm<?> form,
-		final IModel<List<? extends T>> choices, final boolean autoSubmit)
+	public <C extends T> ChoiceFilter(final String id, final IModel<T> model, final FilterForm<?> form,
+		final IModel<List<C>> choices, final boolean autoSubmit)
 	{
 		this(id, model, form, choices, new ChoiceRenderer<T>(), autoSubmit);
 	}
@@ -61,8 +61,8 @@ public class ChoiceFilter<T> extends AbstractFilter
 	 * @param choices
 	 * @param autoSubmit
 	 */
-	public ChoiceFilter(final String id, final IModel<T> model, final FilterForm<?> form,
-		final List<? extends T> choices, final boolean autoSubmit)
+	public <C extends T> ChoiceFilter(final String id, final IModel<T> model, final FilterForm<?> form,
+		final List<C> choices, final boolean autoSubmit)
 	{
 		this(id, model, form, Model.ofList(choices), new ChoiceRenderer<T>(), autoSubmit);
 	}
@@ -75,8 +75,8 @@ public class ChoiceFilter<T> extends AbstractFilter
 	 * @param renderer
 	 * @param autoSubmit
 	 */
-	public ChoiceFilter(final String id, final IModel<T> model, final FilterForm<?> form,
-		final List<? extends T> choices, final IChoiceRenderer<T> renderer, final boolean autoSubmit)
+	public <C extends T> ChoiceFilter(final String id, final IModel<T> model, final FilterForm<?> form,
+		final List<C> choices, final IChoiceRenderer<T> renderer, final boolean autoSubmit)
 	{
 		this(id, model, form, Model.ofList(choices), renderer, autoSubmit);
 	}
@@ -96,8 +96,8 @@ public class ChoiceFilter<T> extends AbstractFilter
 	 *            if true this filter will submit the form on selection change
 	 * @see DropDownChoice
 	 */
-	public ChoiceFilter(final String id, final IModel<T> model, final FilterForm<?> form,
-		final IModel<List<? extends T>> choices, final IChoiceRenderer<T> renderer,
+	public <C extends T> ChoiceFilter(final String id, final IModel<T> model, final FilterForm<?> form,
+		final IModel<List<C>> choices, final IChoiceRenderer<T> renderer,
 		final boolean autoSubmit)
 	{
 		super(id, form);
@@ -126,8 +126,8 @@ public class ChoiceFilter<T> extends AbstractFilter
 	 *            choice renderer
 	 * @return created drop down component
 	 */
-	protected DropDownChoice<T> newDropDownChoice(final String id, final IModel<T> model,
-		final IModel<List<? extends T>> choices, final IChoiceRenderer<T> renderer)
+	protected <C extends T> DropDownChoice<T> newDropDownChoice(final String id, final IModel<T> model,
+		final IModel<List<C>> choices, final IChoiceRenderer<T> renderer)
 	{
 		DropDownChoice<T> dropDownChoice = new DropDownChoice<>(id, model, choices, renderer);
 		dropDownChoice.setNullValid(true);

@@ -16,13 +16,6 @@
  */
 package org.apache.wicket.examples.compref;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-
-import org.apache.wicket.util.io.IClusterable;
 import org.apache.wicket.examples.WicketExamplePage;
 import org.apache.wicket.extensions.markup.html.form.select.IOptionRenderer;
 import org.apache.wicket.extensions.markup.html.form.select.Select;
@@ -33,7 +26,10 @@ import org.apache.wicket.markup.html.panel.FeedbackPanel;
 import org.apache.wicket.model.CompoundPropertyModel;
 import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.Model;
-import org.apache.wicket.model.util.WildcardCollectionModel;
+import org.apache.wicket.model.util.SerializableCollectionModel;
+import org.apache.wicket.util.io.IClusterable;
+
+import java.util.*;
 
 
 /**
@@ -49,7 +45,7 @@ public class SelectPage extends WicketExamplePage
 		"Java.Net");
 
 	/** available choices for large selection box. */
-	private static final List<? extends String> MANY_CHOICES = Arrays.asList("Choice1", "Choice2",
+	private static final List<String> MANY_CHOICES = Arrays.asList("Choice1", "Choice2",
 		"Choice3", "Choice4", "Choice5", "Choice6", "Choice7", "Choice8", "Choice9");
 
 	/**
@@ -103,7 +99,7 @@ public class SelectPage extends WicketExamplePage
 			}
 
 		};
-		IModel<Collection<? extends String>> model = new WildcardCollectionModel<String>(
+		IModel<Collection<String>> model = new SerializableCollectionModel<String>(
 			MANY_CHOICES);
 		choices.add(new SelectOptions<>("manychoices", model, renderer));
 

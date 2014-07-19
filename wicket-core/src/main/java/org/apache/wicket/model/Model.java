@@ -16,19 +16,15 @@
  */
 package org.apache.wicket.model;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.wicket.WicketRuntimeException;
 import org.apache.wicket.model.util.MapModel;
-import org.apache.wicket.model.util.WildcardCollectionModel;
-import org.apache.wicket.model.util.WildcardListModel;
-import org.apache.wicket.model.util.WildcardSetModel;
+import org.apache.wicket.model.util.SerializableCollectionModel;
+import org.apache.wicket.model.util.SerializableListModel;
+import org.apache.wicket.model.util.SerializableSetModel;
 import org.apache.wicket.util.lang.Objects;
+
+import java.io.Serializable;
+import java.util.*;
 
 
 /**
@@ -78,9 +74,9 @@ public class Model<T extends Serializable> implements IModel<T>
 	 *            The List, which may or may not be Serializable
 	 * @return A Model object wrapping the List
 	 */
-	public static <C> IModel<List<? extends C>> ofList(final List<? extends C> list)
+	public static <C> IModel<List<C>> ofList(final List<C> list)
 	{
-		return new WildcardListModel<>(list);
+		return new SerializableListModel<>(list);
 	}
 
 	/**
@@ -110,9 +106,9 @@ public class Model<T extends Serializable> implements IModel<T>
 	 *            The Set, which may or may not be Serializable
 	 * @return A Model object wrapping the Set
 	 */
-	public static <C> IModel<Set<? extends C>> ofSet(final Set<? extends C> set)
+	public static <C> IModel<Set<C>> ofSet(final Set<C> set)
 	{
-		return new WildcardSetModel<>(set);
+		return new SerializableSetModel<>(set);
 	}
 
 	/**
@@ -125,9 +121,9 @@ public class Model<T extends Serializable> implements IModel<T>
 	 *            The Collection, which may or may not be Serializable
 	 * @return A Model object wrapping the Set
 	 */
-	public static <C> IModel<Collection<? extends C>> of(final Collection<? extends C> collection)
+	public static <C> IModel<Collection<C>> of(final Collection<C> collection)
 	{
-		return new WildcardCollectionModel<>(collection);
+		return new SerializableCollectionModel<>(collection);
 	}
 
 
