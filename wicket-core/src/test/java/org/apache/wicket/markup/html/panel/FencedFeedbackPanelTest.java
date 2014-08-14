@@ -29,6 +29,7 @@ import org.apache.wicket.markup.html.WebPage;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.form.Form;
 import org.apache.wicket.markup.html.form.TextField;
+import org.apache.wicket.markup.html.link.Link;
 import org.apache.wicket.util.resource.IResourceStream;
 import org.apache.wicket.util.resource.StringResourceStream;
 import org.apache.wicket.util.tester.WicketTesterScope;
@@ -37,7 +38,7 @@ import org.junit.Test;
 
 /**
  * Tests {@link FencedFeedbackPanel}
- * 
+ *
  * @author igor
  */
 public class FencedFeedbackPanelTest
@@ -49,12 +50,12 @@ public class FencedFeedbackPanelTest
 	public void fencing()
 	{
 		TestPage page = scope.getTester().startPage(TestPage.class);
-		page.containerInput.error("error");
+		page.container1Input.error("error");
 
 		// container messages should be visible to container feedbacks but not outside
 
-		assertTrue(page.containerFeedback.anyMessage());
-		assertTrue(page.containerFeedback2.anyMessage());
+		assertTrue(page.container1Feedback.anyMessage());
+		assertTrue(page.container1Feedback2.anyMessage());
 		assertFalse(page.formFeedback.anyMessage());
 		assertFalse(page.externalFeedback.anyMessage());
 
@@ -63,8 +64,8 @@ public class FencedFeedbackPanelTest
 
 		// form messages should be visible only to the form feedbacks
 
-		assertFalse(page.containerFeedback.anyMessage());
-		assertFalse(page.containerFeedback2.anyMessage());
+		assertFalse(page.container1Feedback.anyMessage());
+		assertFalse(page.container1Feedback2.anyMessage());
 		assertTrue(page.formFeedback.anyMessage());
 		assertFalse(page.externalFeedback.anyMessage());
 
@@ -73,8 +74,8 @@ public class FencedFeedbackPanelTest
 
 		// external messages should be picked up only by catch-all feedbacks
 
-		assertFalse(page.containerFeedback.anyMessage());
-		assertFalse(page.containerFeedback2.anyMessage());
+		assertFalse(page.container1Feedback.anyMessage());
+		assertFalse(page.container1Feedback2.anyMessage());
 		assertFalse(page.formFeedback.anyMessage());
 		assertTrue(page.externalFeedback.anyMessage());
 
@@ -83,8 +84,8 @@ public class FencedFeedbackPanelTest
 
 		// session scoped errors should only be picked up by catch-all feedbacks
 
-		assertFalse(page.containerFeedback.anyMessage());
-		assertFalse(page.containerFeedback2.anyMessage());
+		assertFalse(page.container1Feedback.anyMessage());
+		assertFalse(page.container1Feedback2.anyMessage());
 		assertFalse(page.formFeedback.anyMessage());
 		assertTrue(page.externalFeedback.anyMessage());
 	}
@@ -96,16 +97,17 @@ public class FencedFeedbackPanelTest
 
 		// set a filter that will only allow errors or higher
 
-		page.containerFeedback.setFilter(new ErrorLevelFeedbackMessageFilter(FeedbackMessage.ERROR));
+		page.container1Feedback
+				.setFilter(new ErrorLevelFeedbackMessageFilter(FeedbackMessage.ERROR));
 
 		// report an info message - should be filtered out
 
-		page.containerInput.info("info");
+		page.container1Input.info("info");
 
 		// check info message was filtered out
 
-		assertFalse(page.containerFeedback.anyMessage());
-		assertTrue(page.containerFeedback2.anyMessage());
+		assertFalse(page.container1Feedback.anyMessage());
+		assertTrue(page.container1Feedback2.anyMessage());
 
 		// ensure filtered out messages dont leak
 
@@ -116,16 +118,17 @@ public class FencedFeedbackPanelTest
 
 		page = scope.getTester().startPage(TestPage.class);
 
-		page.containerFeedback.setFilter(new ErrorLevelFeedbackMessageFilter(FeedbackMessage.ERROR));
+		page.container1Feedback
+				.setFilter(new ErrorLevelFeedbackMessageFilter(FeedbackMessage.ERROR));
 
 		// but now with an error message that should not be filtered out
 
-		page.containerInput.error("info");
+		page.container1Input.error("info");
 
 		// check message was not filtered out
 
-		assertTrue(page.containerFeedback.anyMessage());
-		assertTrue(page.containerFeedback2.anyMessage());
+		assertTrue(page.container1Feedback.anyMessage());
+		assertTrue(page.container1Feedback2.anyMessage());
 
 		// and that it should not leak
 
@@ -138,10 +141,10 @@ public class FencedFeedbackPanelTest
 	public void moving()
 	{
 		TestPage page = scope.getTester().startPage(TestPage.class);
-		page.containerInput.error("error");
+		page.container1Input.error("error");
 
-		assertTrue(page.containerFeedback.anyMessage());
-		assertTrue(page.containerFeedback2.anyMessage());
+		assertTrue(page.container1Feedback.anyMessage());
+		assertTrue(page.container1Feedback2.anyMessage());
 
 		// does not propagate out of container
 		assertFalse(page.formFeedback.anyMessage());
@@ -149,11 +152,11 @@ public class FencedFeedbackPanelTest
 		// remove one of two fencing feedback panels
 
 		page = scope.getTester().startPage(TestPage.class);
-		page.containerFeedback.remove();
+		page.container1Feedback.remove();
 
-		page.containerInput.error("error");
+		page.container1Input.error("error");
 
-		assertTrue(page.containerFeedback2.anyMessage());
+		assertTrue(page.container1Feedback2.anyMessage());
 
 		// still does not propagate out of container because there is still a fencing panel
 		assertFalse(page.formFeedback.anyMessage());
@@ -161,20 +164,39 @@ public class FencedFeedbackPanelTest
 		// remove the last fencing feedback panel
 
 		page = scope.getTester().startPage(TestPage.class);
-		page.containerFeedback.remove();
-		page.containerFeedback2.remove();
+		page.container1Feedback.remove();
+		page.container1Feedback2.remove();
 
-		page.containerInput.error("error");
+		page.container1Input.error("error");
 
 		// now propagates out of container
 		assertTrue(page.formFeedback.anyMessage());
 
 	}
 
+	/**
+	 * 
+	 */
+	@Test
+	public void replacingBackAndForthShouldNotBreakFencing()
+	{
+		TestPage page = scope.getTester().startPage(TestPage.class);
+		page.container1Input.error("error");
+		assertTrue(page.container1Feedback.anyMessage());
+		assertFalse(page.formFeedback.anyMessage());
+		scope.getTester().clickLink("forward");
+		assertFalse(page.container2Feedback.anyMessage());
+		scope.getTester().clickLink("backward");
+		assertTrue(page.container1Feedback.anyMessage());
+		assertFalse(page.formFeedback.anyMessage());
+	}
+
 	public static class TestPage extends WebPage implements IMarkupResourceStreamProvider
 	{
-		FencedFeedbackPanel externalFeedback, formFeedback, containerFeedback, containerFeedback2;
-		Component externalLabel, formInput, containerInput;
+		FencedFeedbackPanel externalFeedback, formFeedback, container1Feedback,
+				container1Feedback2, container2Feedback, container2Feedback2;
+		Component externalLabel, formInput, container1Input, container2Input;
+		WebMarkupContainer container1, container2;
 
 		public TestPage()
 		{
@@ -187,34 +209,56 @@ public class FencedFeedbackPanelTest
 			form.add(formFeedback);
 			formInput = new TextField<String>("formInput");
 			form.add(formInput);
-			WebMarkupContainer container = new WebMarkupContainer("container");
-			containerFeedback = new FencedFeedbackPanel("containerFeedback", container);
-			containerFeedback2 = new FencedFeedbackPanel("containerFeedback2", container);
-			container.add(containerFeedback, containerFeedback2);
-			containerInput = new TextField<String>("containerInput");
-			container.add(containerInput);
-			form.add(container);
+			container1 = new WebMarkupContainer("container");
+			container1Input = new TextField<String>("containerInput");
+			container1.add(container1Input);
+			container1Feedback = new FencedFeedbackPanel("container1Feedback", container1);
+			container1Feedback2 = new FencedFeedbackPanel("container1Feedback2", container1);
+			container1.add(container1Feedback, container1Feedback2);
+			container2 = new WebMarkupContainer("container");
+			container2Input = new TextField<String>("containerInput");
+			container2.add(container2Input);
+			container2Feedback = new FencedFeedbackPanel("container1Feedback", container2);
+			container2Feedback2 = new FencedFeedbackPanel("container1Feedback2", container2);
+			container2.add(container2Feedback, container2Feedback2);
+			form.add(container1);
 			add(form);
+			add(new Link<Void>("forward")
+			{
+				@Override public void onClick()
+				{
+					container1.replaceWith(container2);
+				}
+			});
+			add(new Link<Void>("backward")
+			{
+				@Override public void onClick()
+				{
+					container2.replaceWith(container1);
+				}
+			});
 		}
 
 		@Override
 		public IResourceStream getMarkupResourceStream(MarkupContainer container,
-			Class<?> containerClass)
+				Class<?> containerClass)
 		{
 			return new StringResourceStream(//
-				"    <body>" + //
-					"   <div wicket:id='feedback'/>" + //
-					"   <div wicket:id='externalLabel'/>" + //
-					"   <form wicket:id='form'>" + //
-					"       <div wicket:id='formFeedback'/>" + //
-					"       <input wicket:id='formInput' type='text'/>" + //
-					"       <div wicket:id='container'>" + //
-					"           <div wicket:id='containerFeedback'/>" + //
-					"           <input wicket:id='containerInput' type='text'/>" + //
-					"           <div wicket:id='containerFeedback2'/>" + //
-					"       </div>" + //
-					"    </form>" + //
-					"</body>");
+							"<body>" + //
+							"   <div wicket:id='feedback'/>" + //
+							"   <div wicket:id='externalLabel'/>" + //
+							"   <form wicket:id='form'>" + //
+							"       <div wicket:id='formFeedback'/>" + //
+							"       <input wicket:id='formInput' type='text'/>" + //
+							"       <div wicket:id='container'>" + //
+							"           <div wicket:id='container1Feedback'/>" + //
+							"           <input wicket:id='containerInput' type='text'/>" + //
+							"           <div wicket:id='container1Feedback2'/>" + //
+							"       </div>" + //
+							"    </form>" + //
+							"    <a wicket:id='forward'></a>" + //
+							"    <a wicket:id='backward'></a>" + //
+							"</body>");
 		}
 	}
 }
