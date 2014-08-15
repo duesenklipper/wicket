@@ -215,7 +215,6 @@ public class FencedFeedbackPanel extends FeedbackPanel
 	@Override
 	protected void onBeforeRender()
 	{
-		super.onBeforeRender();
 		if (this.fence != null)
 		{
 			// The fence mark is removed when the feedback panel is removed from the hierarchy.
@@ -226,5 +225,6 @@ public class FencedFeedbackPanel extends FeedbackPanel
 				incrementFenceCount();
 			}
 		}
+		super.onBeforeRender();
 	}
 }
