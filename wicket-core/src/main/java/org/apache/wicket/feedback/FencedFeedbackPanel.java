@@ -213,7 +213,7 @@ public class FencedFeedbackPanel extends FeedbackPanel
 	}
 
 	@Override
-	protected void onBeforeRender()
+	protected void onAddToPage()
 	{
 		if (this.fence != null)
 		{
@@ -225,6 +225,6 @@ public class FencedFeedbackPanel extends FeedbackPanel
 				incrementFenceCount();
 			}
 		}
-		super.onBeforeRender();
+		super.onAddToPage();
 	}
 }

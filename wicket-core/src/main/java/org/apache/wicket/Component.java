@@ -447,6 +447,7 @@ public abstract class Component
 	private static final short RFLAG_CONFIGURED = 0x10;
 	private static final short RFLAG_BEFORE_RENDER_SUPER_CALL_VERIFIED = 0x20;
 	private static final short RFLAG_INITIALIZE_SUPER_CALL_VERIFIED = 0x40;
+	private static final short RFLAG_ONADD_SUPER_CALL_VERIFIED = 0x80;
 
 	/**
 	 * Flags that only keep their value during the request. Useful for cache markers, etc. At the
@@ -4486,4 +4487,21 @@ public abstract class Component
 		return getBehaviors(null);
 	}
 
+	final void internalOnAdd()
+	{
+		setRequestFlag(RFLAG_ONADD_SUPER_CALL_VERIFIED, false);
+		onAddToPage();
+		if (!getRequestFlag(RFLAG_ONADD_SUPER_CALL_VERIFIED))
+		{
+			throw new IllegalStateException(Component.class.getName() +
+					" has not been properly added. Something in the hierarchy of " +
+					getClass().getName() +
+					" has not called super.onAddToPage() in the override of onAddToPage() method");
+		}
+	}
+
+	protected void onAddToPage()
+	{
+		setRequestFlag(RFLAG_ONADD_SUPER_CALL_VERIFIED, true);
+	}
 }

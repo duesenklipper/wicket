@@ -937,6 +937,13 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 			{
 				child.internalInitialize();
 			}
+
+		}
+			// onAdd should only be triggered if
+			// - after onInitialize
+		if (page != null && this.isInitialized())
+		{
+			child.internalOnAdd();
 		}
 
 		// if the PREPARED_FOR_RENDER flag is set, we have already called
@@ -944,6 +951,37 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 		if (isPreparedForRender())
 		{
 			child.beforeRender();
+		}
+	}
+
+	@Override protected void onAddToPage()
+	{
+		super.onAddToPage();
+		Component[] children = copyChildren();
+		try
+		{
+			for (final Component child : children)
+			{
+				// We need to check whether the child's wasn't removed from the
+				// component in the meanwhile (e.g. from another's child
+				// onAddToPage)
+				if (child.getParent() == this)
+				{
+					child.internalOnAdd();
+				}
+			}
+		}
+		catch (RuntimeException ex)
+		{
+			if (ex instanceof WicketRuntimeException)
+			{
+				throw ex;
+			}
+			else
+			{
+				throw new WicketRuntimeException("Error adding this container: " +
+						this, ex);
+			}
 		}
 	}
 
@@ -1947,4 +1985,9 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 		}
 	}
 
+	@Override protected void onInitialize()
+	{
+		super.onInitialize();
+		internalOnAdd();
+	}
 }
