@@ -74,6 +74,27 @@ public class OnReAddTest
 	}
 
 	@Test
+	public void onReAddIsOnlyCalledAfterRemove()
+	{
+		Page page = createPage();
+		page.internalInitialize();
+		Component probe = createUninitializedProbe();
+		page.add(probe);
+		assertFalse(onReAddCalled);
+		assertTrue(onInitializeCalled);
+		onInitializeCalled = false;
+		page.internalInitialize();
+		assertFalse(onReAddCalled);
+		assertFalse(onInitializeCalled);
+		page.remove(probe);
+		assertFalse(onReAddCalled);
+		assertFalse(onInitializeCalled);
+		page.add(probe);
+		assertTrue(onReAddCalled);
+		assertFalse(onInitializeCalled);
+	}
+	
+	@Test
 	public void initializeIsCalledOnFirstAdd_OnReAddIsCalledAfterEachRemoveAndAdd()
 	{
 		Page page = createPage();
@@ -83,6 +104,9 @@ public class OnReAddTest
 		assertFalse(onReAddCalled);
 		assertTrue(onInitializeCalled);
 		onInitializeCalled = false;
+		page.internalInitialize();
+		assertFalse(onReAddCalled);
+		assertFalse(onInitializeCalled);
 		page.remove(probe);
 		assertFalse(onReAddCalled);
 		assertFalse(onInitializeCalled);
@@ -93,7 +117,7 @@ public class OnReAddTest
 		page.internalInitialize();
 		// just another initialize run shouldn't call onReAdd nor onInitialize. onReAdd should only be called
 		// after remove and add
-		assertFalse(onReAddCalled); 
+		assertFalse(onReAddCalled);
 		assertFalse(onInitializeCalled);
 		page.remove(probe);
 		page.add(probe);
@@ -124,21 +148,22 @@ public class OnReAddTest
 	{
 		Page page = createPage();
 		page.internalInitialize();
+		Label brokenProbe = new Label("foo")
+		{
+			@Override
+			protected void onReAdd()
+			{
+				; // I should call super, but since I don't, this should throw an exception
+			}
+		};
+		brokenProbe.internalInitialize();
+		page.add(brokenProbe);
+		page.remove(brokenProbe);
 		try
 		{
-			Label brokenProbe = new Label("foo")
-			{
-				@Override
-				protected void onReAdd()
-				{
-					; // I should call super, but since I don't, this should throw an exception
-				}
-			};
-			brokenProbe.internalInitialize();
 			page.add(brokenProbe);
 			fail("should have thrown exception");
-		}
-		catch (IllegalStateException e)
+		} catch (IllegalStateException e)
 		{
 			assertTrue(e.getMessage().contains("super.onReAdd"));
 		}
@@ -155,7 +180,8 @@ public class OnReAddTest
 				onReAddCalled = true;
 			}
 
-			@Override protected void onInitialize()
+			@Override
+			protected void onInitialize()
 			{
 				super.onInitialize();
 				onInitializeCalled = true;

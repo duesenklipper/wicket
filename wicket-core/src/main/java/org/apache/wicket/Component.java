@@ -378,8 +378,8 @@ public abstract class Component
 	protected static final int FLAG_RESERVED5 = 0x10000;
 	/** onInitialize called */
 	protected static final int FLAG_INITIALIZED = 0x20000;
-	/** Reserved subclass-definable flag bit */
-	private static final int FLAG_NOTUSED7 = 0x40000;
+	/** Set when a component is removed from the hierarchy */
+	private static final int FLAG_REMOVED = 0x40000;
 	/** Reserved subclass-definable flag bit */
 	protected static final int FLAG_RESERVED8 = 0x80000;
 
@@ -412,8 +412,6 @@ public abstract class Component
 
 	private static final int FLAG_DETACHING = 0x80000000;
 	
-	private static final int FLAG_RE_ADDED = 0x400000;
-
 	/**
 	 * The name of attribute that will hold markup id
 	 */
@@ -890,9 +888,9 @@ public abstract class Component
 		}
 		else
 		{
-			if (!getFlag(FLAG_RE_ADDED))
+			if (getFlag(FLAG_REMOVED))
 			{
-				setFlag(FLAG_RE_ADDED, true);
+				setFlag(FLAG_REMOVED, false);
 				setRequestFlag(RFLAG_ON_RE_ADD_SUPER_CALL_VERIFIED, false);
 				onReAdd();
 				if (!getRequestFlag(RFLAG_ON_RE_ADD_SUPER_CALL_VERIFIED))
@@ -1142,7 +1140,7 @@ public abstract class Component
 	{
 		setFlag(FLAG_REMOVING_FROM_HIERARCHY, true);
 		onRemove();
-		setFlag(FLAG_RE_ADDED, false);
+		setFlag(FLAG_REMOVED, true);
 		if (getFlag(FLAG_REMOVING_FROM_HIERARCHY))
 		{
 			throw new IllegalStateException(Component.class.getName() +
